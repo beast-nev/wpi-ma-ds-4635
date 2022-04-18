@@ -1,4 +1,5 @@
 # ignore the csv files
 /data
+/submission
 
 __pychache__
