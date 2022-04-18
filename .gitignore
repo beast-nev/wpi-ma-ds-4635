@@ -1,2 +1,4 @@
 # ignore the csv files
 /data
+
+__pychache__

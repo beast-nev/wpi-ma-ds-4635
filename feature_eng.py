@@ -26,5 +26,3 @@ def condense_data(train):
 if __name__ == "__main__":
     training_data = open_csv()
     condense_data(training_data)
-
-
