@@ -1,8 +1,15 @@
+from re import T
+from sklearn.model_selection import RandomizedSearchCV
 import os
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import f_classif
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import StandardScaler
 
 # load training & test from csv
 x_train = pd.read_csv('data/train.csv')
@@ -17,10 +24,10 @@ submission = pd.DataFrame(
     columns=["sequence"], data=x_test["sequence"].astype(int))
 
 # remove all but sensor data
-x_train = x_train.loc[:, x_train.columns.isin(
-    ['sensor_02', 'sensor_04', 'sensor_09'])]
-x_test = x_test.loc[:, x_test.columns.isin(
-    ['sensor_02', 'sensor_04', 'sensor_09'])]
+x_train = x_train.loc[:, ~x_train.columns.isin(
+    ['sequence', 'subject', 'step'])]
+x_test = x_test.loc[:, ~x_test.columns.isin(
+    ['sequence', 'subject', 'step'])]
 
 # load training labels from csv
 y_train = pd.read_csv('data/train_labels.csv')
@@ -28,21 +35,32 @@ y_train = pd.read_csv('data/train_labels.csv')
 # remove all but state data
 y_train = y_train.loc[:, y_train.columns != 'sequence']
 
-# classif for feature selection
-imp = f_classif(x_train, y_train)
-print(imp[1])
-# 2, 4, 9cls
+# feature selection
+selector = SelectKBest(f_classif, k=6)
+x_train = selector.fit_transform(x_train, y_train.values.ravel())
+
+# predictors choosen
+# print(selector.get_feature_names_out())
+# 'sensor_02' 'sensor_04' 'sensor_06' 'sensor_08' 'sensor_10' 'sensor_12'
+
+
+X_train, X_test, Y_train, Y_test = train_test_split(
+    x_train, y_train.values.ravel(), test_size=0.3, random_state=42)
 
 # fit model
-model = RandomForestClassifier().fit(
-    x_train, y_train.values.ravel())  # error fixed using ravel?
+model = RandomForestClassifier(n_estimators=500, min_samples_split=5,
+                               min_samples_leaf=2, max_features='sqrt', max_depth=20, bootstrap=True)
+print("Accuracies: ", np.mean(cross_val_score(
+    model, X_train, Y_train, cv=5)))
+model.fit(X_train, Y_train)
 
 # predict y_test
-y_pred = model.predict(x_test)
+y_pred = model.predict(X_test)
 
+print("Test train split score: ", accuracy_score(Y_test, y_pred))
 # make state in submission csv our prediction
-submission["state"] = y_pred
+# submission["state"] = y_pred
 
-# write to csv for kaggle submission
-os.makedirs('submissions/random_forests', exist_ok=True)
-submission.to_csv('submissions/random_forests/out.csv', index=False)
+# # write to csv for kaggle submission
+# os.makedirs('submissions/random_forests', exist_ok=True)
+# submission.to_csv('submissions/random_forests/out.csv', index=False)
