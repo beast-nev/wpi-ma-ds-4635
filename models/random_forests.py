@@ -2,9 +2,8 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import RandomizedSearchCV
 from sklearn.feature_selection import SelectKBest, mutual_info_classif
-from sklearn.feature_selection import SequentialFeatureSelector
+from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import accuracy_score
@@ -34,9 +33,9 @@ y_train = pd.read_csv('data/train_labels.csv')
 # remove all but state data
 y_train = y_train.loc[:, y_train.columns != 'sequence']
 
-# feature selection
-selector = SelectKBest(mutual_info_classif, k=6)
-x_train = selector.fit_transform(x_train, y_train.values.ravel())
+# # feature selection
+# selector = SelectKBest(mutual_info_classif, k=6)
+# x_train = selector.fit_transform(x_train, y_train.values.ravel())
 
 # if_classif
 # Accuracies:  0.6850963844665071
@@ -53,15 +52,12 @@ x_train = selector.fit_transform(x_train, y_train.values.ravel())
 X_train, X_test, Y_train, Y_test = train_test_split(
     x_train, y_train.values.ravel(), test_size=0.3, random_state=42)
 
-# fit model
+# model
 model = RandomForestClassifier(n_estimators=250, min_samples_split=5,
-                               min_samples_leaf=2, max_features='sqrt', max_depth=20, bootstrap=True)
-sfs = SequentialFeatureSelector(model, n_features_to_select=3)
-sfs.fit(X_train, Y_train)
-print(sfs.get_feature_names_out())
-print(sfs.get_support())
+                               min_samples_leaf=2, max_features='sqrt', max_depth=10, bootstrap=True)
+
 print("Accuracies: ", np.mean(cross_val_score(
-    model, X_train, Y_train, cv=5)))
+    model, x_train, y_train.values.ravel(), cv=5)))
 model.fit(X_train, Y_train)
 
 # predict y_test

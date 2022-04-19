@@ -1,0 +1,17 @@
+'shrinking': True, 'probability': False, 'kernel': 'rbf', 'gamma': 'scale', 'degree': 1.0,
+'decision_function_shape': 'ovr', 'cache_size': 579.5918367346939, 'break_ties': False, 'C': 1.0
+With k=6 best
+if_classif
+Accuracies:  0.6365735885830673
+Test train split score:  0.6236683352586317
+mutal_class_if
+Accuracies:  0.6498319721930927
+Test train split score:  0.6438197920677705
+
+With no kbest
+Accuracies:  0.6643562389251304
+Test train split score:  0.6563984084199718
+
+Without k best
+Accuracies:  0.6643562389251304
+Test train split score:  0.6563984084199718

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif
+from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import RandomizedSearchCV
@@ -34,24 +35,8 @@ y_train = pd.read_csv('data/train_labels.csv')
 # remove all but state data
 y_train = y_train.loc[:, y_train.columns != 'sequence']
 
-selector = SelectKBest(mutual_info_classif, k=6)
-x_train = selector.fit_transform(x_train, y_train.values.ravel())
-
-# With k=6 best
-# if_classif
-# Accuracies:  0.6365735885830673
-# Test train split score:  0.6236683352586317
-# mutal_class_if
-# Accuracies:  0.6498319721930927
-# Test train split score:  0.6438197920677705
-
-# With no kbest
-# Accuracies:  0.6643562389251304
-# Test train split score:  0.6563984084199718
-
-# Without k best
-# Accuracies:  0.6643562389251304
-# Test train split score:  0.6563984084199718
+# selector = SelectKBest(mutual_info_classif, k=6)
+# x_train = selector.fit_transform(x_train, y_train.values.ravel())
 
 scaler = StandardScaler()
 x_train = scaler.fit_transform(x_train)
@@ -62,10 +47,11 @@ X_train, X_test, Y_train, Y_test = train_test_split(
 # fit model
 model = SVC(shrinking=True, probability=False, kernel='rbf', gamma='scale', degree=1.0, decision_function_shape='ovr', cache_size=580, break_ties=False, C=1.0).fit(
     X_train, Y_train)
-
-# 'shrinking': True, 'probability': False, 'kernel': 'rbf', 'gamma': 'scale', 'degree': 1.0,
-# 'decision_function_shape': 'ovr', 'cache_size': 579.5918367346939, 'break_ties': False, 'C': 1.0
-
+# sfs, choosing 3
+sfs = SequentialFeatureSelector(model, n_features_to_select=3)
+sfs.fit(X_train, Y_train)
+print(sfs.get_feature_names_out())
+print(sfs.get_support())
 
 print("Accuracies: ", np.mean(cross_val_score(
     model, X_train, Y_train, cv=5)))
