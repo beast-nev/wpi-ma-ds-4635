@@ -1,17 +1,35 @@
-'shrinking': True, 'probability': False, 'kernel': 'rbf', 'gamma': 'scale', 'degree': 1.0,
-'decision_function_shape': 'ovr', 'cache_size': 579.5918367346939, 'break_ties': False, 'C': 1.0
-With k=6 best
-if_classif
-Accuracies:  0.6365735885830673
-Test train split score:  0.6236683352586317
-mutal_class_if
-Accuracies:  0.6498319721930927
-Test train split score:  0.6438197920677705
+SVC:
+    'shrinking': True, 'probability': False, 'kernel': 'rbf', 'gamma': 'scale', 'degree': 1.0,
+    'decision_function_shape': 'ovr', 'cache_size': 579.5918367346939, 'break_ties': False, 'C': 1.0
+    With k=6 best
+    if_classif
+    Accuracies:  0.6365735885830673
+    Test train split score:  0.6236683352586317
+    mutal_class_if
+    Accuracies:  0.6498319721930927
+    Test train split score:  0.6438197920677705
 
-With no kbest
-Accuracies:  0.6643562389251304
-Test train split score:  0.6563984084199718
+    With no kbest
+    Accuracies:  0.6643562389251304
+    Test train split score:  0.6563984084199718
 
-Without k best
-Accuracies:  0.6643562389251304
-Test train split score:  0.6563984084199718
+    Without k best
+    Accuracies:  0.6643562389251304
+    Test train split score:  0.6563984084199718
+
+
+NCA KNN:
+    Accuracy:  0.6307277628032345
+
+RF:
+    feature selection
+    selector = SelectKBest(mutual_info_classif, k=6)
+    x_train = selector.fit_transform(x_train, y_train.values.ravel())
+
+    if_classif
+    Accuracies:  0.6850963844665071
+    Test train split score:  0.6733410345270183
+
+    mustal_class_if
+    Accuracies:  0.6935688658274356
+    Test train split score:  0.6920806058272365
