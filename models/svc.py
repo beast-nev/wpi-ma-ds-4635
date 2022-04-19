@@ -35,11 +35,16 @@ y_train = pd.read_csv('data/train_labels.csv')
 # remove all but state data
 y_train = y_train.loc[:, y_train.columns != 'sequence']
 
-# selector = SelectKBest(f_classif, k=6)
-# x_train = selector.fit_transform(x_train, y_train.values.ravel())
+selector = SelectKBest(f_classif, k=3)
+x_train = selector.fit_transform(x_train, y_train.values.ravel())
+
 # With k=6 best
 # Accuracies:  0.6365735885830673
 # Test train split score:  0.6236683352586317
+
+# Without k best
+# Accuracies:  0.6643562389251304
+# Test train split score:  0.6563984084199718
 
 scaler = StandardScaler()
 x_train = scaler.fit_transform(x_train)
