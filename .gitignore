@@ -1,5 +1,6 @@
 # ignore the csv files
 /data
+/models/data
 /submissions
 
 # ignore pycharm files

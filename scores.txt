@@ -33,3 +33,6 @@ RF:
     mustal_class_if
     Accuracies:  0.6935688658274356
     Test train split score:  0.6920806058272365
+
+Logistic Regression
+    Accuracy:  0.5480976775976549
