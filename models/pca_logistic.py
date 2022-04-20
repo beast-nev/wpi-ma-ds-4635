@@ -6,9 +6,6 @@ from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
-# bestK
-# optimize
-
 x_train = pd.read_csv('data/train.csv')
 x_test = pd.read_csv('data/test.csv')
 
@@ -56,5 +53,5 @@ y_pred = model.predict(x_test)
 submission["state"] = y_pred
 
 # write to csv for kaggle submission
-os.makedirs('submissions/pca', exist_ok=True)
-submission.to_csv('submissions/pca/out.csv', index=False)
+os.makedirs('submissions/pca_logistic', exist_ok=True)
+submission.to_csv('submissions/pca_logistic/out.csv', index=False)
