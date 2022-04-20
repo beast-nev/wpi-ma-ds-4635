@@ -38,10 +38,10 @@ x_train = scaler.fit_transform(x_train)
 
 
 # Make an instance of the Model
-pca = PCA(.5)
+pca = PCA(.95)
 pca.fit(x_train)
-train_img = pca.transform(x_train)
-test_img = pca.transform(x_test)
+x_train = pca.transform(x_train)
+x_test = pca.transform(x_test)
 
 # model
 model = LogisticRegression().fit(x_train, y_train)
