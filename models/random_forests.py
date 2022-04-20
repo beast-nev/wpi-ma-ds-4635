@@ -60,7 +60,7 @@ x_train = scaler.fit_transform(x_train)
 # 'n_estimators': 466, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 'sqrt', 'max_depth': 60, 'bootstrap': True
 # 'n_estimators': 500, 'min_samples_split': 10, 'min_samples_leaf': 4, 'max_features': 'sqrt', 'max_depth': 49, 'bootstrap': True
 # model
-model = RandomForestClassifier(n_estimators=466, min_samples_split=2,
+model = RandomForestClassifier(n_estimators=500, min_samples_split=2,
                                min_samples_leaf=1, max_features='sqrt', max_depth=60, bootstrap=True)
 
 print("Accuracies: ", np.mean(cross_val_score(
