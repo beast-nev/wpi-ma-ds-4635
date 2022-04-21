@@ -7,6 +7,7 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif, SequentialFeatureSelector
+from sklearn.preprocessing import MultiLabelBinarizer
 
 # load training & test from csv
 x_train = pd.read_csv('data/train.csv')
@@ -63,7 +64,7 @@ x_train = x_train.drop("subject", axis=1, level=0)
 x_test = x_test.drop("subject", axis=1, level=0)
 
 # select k best features based on mutual_classfi
-selector = SelectKBest(k=26, score_func=f_classif)
+selector = SelectKBest(k=64, score_func=f_classif)
 selector.fit(x_train, y_train.values.ravel())
 
 # get which features we want for test
@@ -105,9 +106,15 @@ print("Finished feature selection")
 #     'max_features': max_features
 # }
 
-# # model
-model = GradientBoostingClassifier(verbose=0, random_state=42, n_estimators=300, min_samples_split=3,
-                                   min_samples_leaf=4, max_features="sqrt", max_depth=9, loss="exponential", criterion="friedman_mse")
+# model
+# (verbose=0, random_state=42, n_estimators=300, min_samples_split=3,min_samples_leaf=4, max_features="sqrt", max_depth=9, loss="exponential", criterion="friedman_mse")
+# model = GradientBoostingClassifier(verbose=1, random_state=42, n_estimators=300, min_samples_split=3,
+#                                    min_samples_leaf=4, max_features="sqrt", max_depth=9, loss="exponential", criterion="friedman_mse")
+model = HistGradientBoostingClassifier(learning_rate=0.05, max_leaf_nodes=25,
+                                       max_iter=1000, min_samples_leaf=500,
+                                       l2_regularization=1,
+                                       max_bins=255,
+                                       random_state=4, verbose=0)
 
 # boosting_random = RandomizedSearchCV(estimator=model, param_distributions=random_grid,
 #                                      n_iter=100, cv=5, verbose=1, random_state=42, n_jobs=4)
@@ -115,9 +122,10 @@ model = GradientBoostingClassifier(verbose=0, random_state=42, n_estimators=300,
 # boosting_random.fit(x_train, y_train.values.ravel())
 # print(boosting_random.best_params_)
 # print(boosting_random.best_score_)
+
 # model scoring
 print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=10)))
+    model, x_train, y_train.values.ravel(), cv=10, verbose=1)))
 
 # fitting for prediction
 model.fit(x_train, y_train.values.ravel())

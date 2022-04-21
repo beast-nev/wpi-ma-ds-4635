@@ -1,5 +1,7 @@
 import os
+from re import sub
 from sklearn.feature_selection import SelectKBest, mutual_info_classif, SequentialFeatureSelector
+from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.ensemble import BaggingClassifier
 from sklearn.svm import SVC
@@ -63,8 +65,12 @@ x_test = x_test.reset_index()
 x_train = x_train.drop("subject", axis=1, level=0)
 x_test = x_test.drop("subject", axis=1, level=0)
 
-# select k best features based on mutual_classfi
-selector = SelectKBest(k=60, score_func=mutual_info_classif)
+# select k best features based on mutual_classif
+print("Starting SFS")
+model = BaggingClassifier((
+    SVC(kernel="rbf")).fit(x_train, y_train.values.ravel()), n_jobs=-1, verbose=1, max_samples=0.3, max_features=0.5)
+selector = SequentialFeatureSelector(
+    estimator=model, n_features_to_select=26, n_jobs=-1)
 selector.fit(x_train, y_train.values.ravel())
 
 # get which features we want for test
@@ -72,7 +78,7 @@ mask = selector.get_support()
 features_chosen_multi_index = x_train.columns[mask]
 features_chosen = [feature_tuple[0]
                    for feature_tuple in features_chosen_multi_index]
-
+print("Features chosen: ", features_chosen)
 # transform x_train for training
 x_train = selector.fit_transform(x_train.values, y_train.values.ravel())
 
@@ -89,14 +95,13 @@ x_train = scaler.fit_transform(x_train)
 print("Finished feature selection")
 
 # model
-model = BaggingClassifier(
-    SVC(), n_jobs=-1, verbose=1, max_samples=0.3, max_features=0.5).fit(x_train, y_train.values.ravel())
+
 print("Accuracy: ", np.mean(cross_val_score(
     model, x_train, y_train.values.ravel(), cv=10)))
 
-# # predict y_test
-# 12218 rows x 15 columns
-# ValueError: Length of values (12218) does not match length of index (733080)
+model.fit(x_train, y_train.values.ravel())
+
+# predict y_test
 y_pred = model.predict(x_test)
 
 # make state in submission csv our prediction

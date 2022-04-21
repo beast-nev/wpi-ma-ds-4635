@@ -20,7 +20,23 @@ SVC:
         Test train split score:  0.6563984084199718
 
     New FE:
+        SelectKBest(k=26), Bagging(ovr(SVC))
         Accuracy:  0.6087102102520806
+        kernel:
+            linear:
+                Accuracy:  0.6490669867388767
+            poly
+                Accuracy:  0.523798320095547
+            rbf:
+                Accuracy:  0.716342535211602
+            sigmoid:
+                Accuracy:  0.5395111432950074
+        No ovr: kernel=rbf
+            Accuracy:  0.7110290972219337
+        
+        Forward Subset Selection:
+            
+                
 
 NCA KNN:
     Accuracy:  0.6307277628032345
@@ -55,6 +71,8 @@ Boosting (SelectKBest(k=26)):
 
     {'n_estimators': 300, 'min_samples_split': 3, 'min_samples_leaf': 4, 'max_features': 'sqrt', 'max_depth': 9, 'loss': 'exponential', 'criterion': 'friedman_mse'}
     0.8099197840521819
+
+    Accuracy:  0.8270178403076205 (SelectKBest(k=64))
 
 RF:
     feature selection
