@@ -49,6 +49,12 @@ Bagging KNN: (cv=10) // SelectKBest(k=60), max_samples=0.3, max_features=0.5
 
 Boosting (SelectKBest(k=26)):
     Accuracy:  0.781423406644979
+    
+    {'n_estimators': 300, 'min_samples_split': 3, 'min_samples_leaf': 5, 'max_features': 'sqrt', 'max_depth': 9, 'loss': 'deviance', 'learning_rate': 1, 'criterion': 'friedman_mse'}
+    0.8031807279444703
+
+    {'n_estimators': 300, 'min_samples_split': 3, 'min_samples_leaf': 4, 'max_features': 'sqrt', 'max_depth': 9, 'loss': 'exponential', 'criterion': 'friedman_mse'}
+    0.8099197840521819
 
 RF:
     feature selection

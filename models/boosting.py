@@ -87,50 +87,47 @@ x_train = scaler.fit_transform(x_train)
 
 print("Finished feature selection")
 
-loss = ["deviance", "exponential"]
-learning_rate = np.linspace(0.1, 2.0, 10)
-n_estimators = np.linspace(50, 300, 5)
-subsample = np.linspace(1, 3, 5)
-criterion = ["friedman_mse", "mse"]
-min_samples_split = np.linspace(2, 6, 6)
-min_samples_leaf = np.linspace(1, 5, 5)
-max_depth = np.linspace(3, 9, 3)
-max_features = ["sqrt", "log2"]
+# loss = ["deviance", "exponential"]
+# n_estimators = np.linspace(50, 300, 5).astype(int)
+# criterion = ["friedman_mse"]
+# min_samples_split = np.linspace(2, 6, 6).astype(int)
+# min_samples_leaf = np.linspace(1, 5, 5).astype(int)
+# max_depth = np.linspace(3, 9, 3).astype(int)
+# max_features = ["sqrt", "log2"]
 
-random_grid = {
-    'loss': loss,
-    'learning_rate': learning_rate,
-    'n_estimators': n_estimators,
-    'subsample': subsample,
-    'criterion': criterion,
-    'min_samples_split': min_samples_split,
-    'min_samples_leaf': min_samples_leaf,
-    'max_depth': max_depth,
-    'max_features': max_features
-}
+# random_grid = {
+#     'loss': loss,
+#     'n_estimators': n_estimators,
+#     'criterion': criterion,
+#     'min_samples_split': min_samples_split,
+#     'min_samples_leaf': min_samples_leaf,
+#     'max_depth': max_depth,
+#     'max_features': max_features
+# }
 
-# model
-model = GradientBoostingClassifier(verbose=0, random_state=42)
+# # model
+model = GradientBoostingClassifier(verbose=0, random_state=42, n_estimators=300, min_samples_split=3,
+                                   min_samples_leaf=4, max_features="sqrt", max_depth=9, loss="exponential", criterion="friedman_mse")
 
-boosting_random = RandomizedSearchCV(estimator=model, param_distributions=random_grid,
-                                     n_iter=100, cv=5, verbose=1, random_state=42, n_jobs=4)
+# boosting_random = RandomizedSearchCV(estimator=model, param_distributions=random_grid,
+#                                      n_iter=100, cv=5, verbose=1, random_state=42, n_jobs=4)
 
-boosting_random.fit(x_train, y_train.values.ravel())
-print(boosting_random.best_params_)
-print(boosting_random.best_score_)
+# boosting_random.fit(x_train, y_train.values.ravel())
+# print(boosting_random.best_params_)
+# print(boosting_random.best_score_)
 # model scoring
-# print("Accuracy: ", np.mean(cross_val_score(
-#     model, x_train, y_train.values.ravel(), cv=10)))
+print("Accuracy: ", np.mean(cross_val_score(
+    model, x_train, y_train.values.ravel(), cv=10)))
 
-# # fitting for prediction
-# model.fit(x_train, y_train.values.ravel())
+# fitting for prediction
+model.fit(x_train, y_train.values.ravel())
 
-# # predict y_test
-# y_pred = model.predict(x_test)
+# predict y_test
+y_pred = model.predict(x_test)
 
-# # make state in submission csv our prediction
-# submission["state"] = y_pred
+# make state in submission csv our prediction
+submission["state"] = y_pred
 
-# # write to csv for kaggle submission
-# os.makedirs('submissions/boosting', exist_ok=True)
-# submission.to_csv('submissions/boosting/out.csv', index=False)
+# write to csv for kaggle submission
+os.makedirs('submissions/boosting', exist_ok=True)
+submission.to_csv('submissions/boosting/out.csv', index=False)
