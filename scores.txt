@@ -20,15 +20,35 @@ SVC:
         Test train split score:  0.6563984084199718
 
     New FE:
-        Forward selection: 
-            n_features = 3 ->
-            n_features = 8 ->
-        Backward selection: 
-            n_features = 62 ->
-            n_features = 77 ->
+        Accuracy:  0.6087102102520806
 
 NCA KNN:
     Accuracy:  0.6307277628032345
+
+Bagging KNN: (cv=10) // SelectKBest(k=60), max_samples=0.3, max_features=0.5
+    mutal_class_if:
+        Accuracy:  0.696895923529164 (k=1)
+        Accuracy:  0.7211950882047733 (k=3)
+        Accuracy:  0.7248924918108071 (k=5) <- best
+        Accuracy:  0.7196931774425035 (k=10)
+        Accuracy:  0.7128005794287945 (k=15)
+    if_classif:
+        Accuracy:  0.7076783363285717 (k=1)
+        Accuracy:  0.7293579975235145 (k=3)
+        Accuracy:  0.7310147479639004 (k=5) <- best
+        Accuracy:  0.7282808390385257 (k=10)
+        Accuracy:  0.7225433459135318 (k=15)
+    SelectKBest(k=30) // if_classif (knn=5)
+        Accuracy:  0.7579326151485684
+    SelectKBest(k=15) // if_classif (knn=5)
+        Accuracy:  0.7230427962096837
+    SelectKBest(k=23) // if_classif (knn=5)
+        Accuracy:  0.7534277579974049
+    SelectKBest(k=26) // if_classif (knn=5)
+        Accuracy:  0.7582792430284322 <--- best cv but lowest test score on kaggle
+
+Boosting (SelectKBest(k=26)):
+    Accuracy:  0.781423406644979
 
 RF:
     feature selection
