@@ -8,6 +8,7 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif, SequentialFeatureSelector
 from sklearn.preprocessing import MultiLabelBinarizer
+from time import time
 
 # load training & test from csv
 x_train = pd.read_csv('data/train.csv')
@@ -59,22 +60,32 @@ x_test = x_test.reset_index()
 
 # feature selection
 
+model = HistGradientBoostingClassifier(max_iter=1000, min_samples_leaf=250,
+                                       random_state=42, verbose=5)
+
 # remove subject from features
 x_train = x_train.drop("subject", axis=1, level=0)
 x_test = x_test.drop("subject", axis=1, level=0)
 
-# select k best features based on mutual_classfi
-selector = SelectKBest(k=64, score_func=f_classif)
-selector.fit(x_train, y_train.values.ravel())
+start_time = time()
+selector = SequentialFeatureSelector(
+    model, n_features_to_select=3, direction="forward"
+).fit(x_train, y_train.values.ravel())
+end_time = time()
+
+print("Total selection time: ", end_time-start_time)
 
 # get which features we want for test
 mask = selector.get_support()
 features_chosen_multi_index = x_train.columns[mask]
 features_chosen = [feature_tuple[0]
                    for feature_tuple in features_chosen_multi_index]
-
+print("==================================================")
+print("Features chosen: ", features_chosen)
 # transform x_train for training
 x_train = selector.fit_transform(x_train.values, y_train.values.ravel())
+
+model.fit(x_train, y_train.values.ravel())
 
 # adjust test for features chosen
 x_test = x_test.drop(sensor_names, axis=1, level=0)
@@ -110,11 +121,7 @@ print("Finished feature selection")
 # (verbose=0, random_state=42, n_estimators=300, min_samples_split=3,min_samples_leaf=4, max_features="sqrt", max_depth=9, loss="exponential", criterion="friedman_mse")
 # model = GradientBoostingClassifier(verbose=1, random_state=42, n_estimators=300, min_samples_split=3,
 #                                    min_samples_leaf=4, max_features="sqrt", max_depth=9, loss="exponential", criterion="friedman_mse")
-model = HistGradientBoostingClassifier(learning_rate=0.05, max_leaf_nodes=25,
-                                       max_iter=1000, min_samples_leaf=500,
-                                       l2_regularization=1,
-                                       max_bins=255,
-                                       random_state=4, verbose=0)
+
 
 # boosting_random = RandomizedSearchCV(estimator=model, param_distributions=random_grid,
 #                                      n_iter=100, cv=5, verbose=1, random_state=42, n_jobs=4)
