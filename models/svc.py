@@ -15,7 +15,7 @@ from time import time
 x_train = pd.read_csv('data/train.csv')
 x_test = pd.read_csv('data/test.csv')
 
-# make the columns the time series
+# sensor names for easy indexing
 sensor_names = ["sensor_00", "sensor_01", "sensor_02", "sensor_03", "sensor_04", "sensor_05", "sensor_06",
                 "sensor_07", "sensor_08", "sensor_09", "sensor_10", "sensor_11", "sensor_12"]
 
@@ -23,11 +23,11 @@ sensor_names = ["sensor_00", "sensor_01", "sensor_02", "sensor_03", "sensor_04",
 submission = pd.DataFrame(
     columns=["sequence"], data=x_test[["sequence"]].groupby(np.arange(len(x_test[["sequence"]])) // 60).mean())
 
+# change index of train and test
 x_train = x_train.pivot(
     index=["sequence", "subject"], columns="step", values=sensor_names)
 x_test = x_test.pivot(
     index=["sequence", "subject"], columns="step", values=sensor_names)
-
 
 # create new features for the mean,std,max,min,and sum of each sensor values
 for i in sensor_names:
@@ -57,71 +57,61 @@ x_train = x_train.reset_index()
 x_test = x_test.drop(sensor_names, axis=1, level=0)
 x_test = x_test.reset_index()
 
-# feature selection
+# feature selection & model creation
+model = OneVsRestClassifier(SVC(kernel="rbf", random_state=42, verbose=3))
 
 # remove subject from features
 x_train = x_train.drop("subject", axis=1, level=0)
 x_test = x_test.drop("subject", axis=1, level=0)
 
-# select k best features based on mutual_classif
+# forward subset selection
+start_time = time()
+selector = SequentialFeatureSelector(
+    model, direction="forward").fit(x_train, y_train.values.ravel())
+end_time = time()
 
-# print("Starting SFS")
-# model = SVC(kernel="rbf", verbose=5)
-# # selector = SequentialFeatureSelector(
-# #     estimator=model, n_features_to_select=3, n_jobs=-1)
-# # selector.fit(x_train, y_train.values.ravel())
-# # model.fit(x_train, y_train.values.ravel())
+# runtime of subset selection
+print("Total selection time: ", end_time-start_time)
 
-# tic_fwd = time()
-# sfs_forward = SequentialFeatureSelector(
-#     model, n_features_to_select=3, direction="forward"
-# ).fit(x_train, y_train.values.ravel())
-# toc_fwd = time()
+# remove subject from features
+x_train = x_train.drop("subject", axis=1, level=0)
+x_test = x_test.drop("subject", axis=1, level=0)
 
-# tic_bwd = time()
-# sfs_backward = SequentialFeatureSelector(
-#     model, n_features_to_select=3, direction="backward"
-# ).fit(x_train, y_train.values.ravel())
-# toc_bwd = time()
+# get which features we want for test
+mask = selector.get_support()
+features_chosen_multi_index = x_train.columns[mask]
+features_chosen = [feature_tuple[0]
+                   for feature_tuple in features_chosen_multi_index]
+print("Features chosen: ", features_chosen)
 
-# print(f"Done forward selection in {toc_fwd - tic_fwd:.3f}s")
+# transform x_train for training
+x_train = selector.transform(x_train)
 
-# print(f"Done backward selection in in {toc_bwd - tic_bwd:.3f}s")
+# adjust test for features chosen
+x_test = x_test.drop(sensor_names, axis=1, level=0)
+x_test = x_test.reset_index()
+x_test = x_test[features_chosen]
+x_test = np.array(x_test)
 
-# # get which features we want for test
-# mask = sfs_forward.get_support()
-# features_chosen_multi_index = x_train.columns[mask]
-# features_chosen = [feature_tuple[0]
-#                    for feature_tuple in features_chosen_multi_index]
-# print("Features chosen: ", features_chosen)
-# # transform x_train for training
-# x_train = sfs_forward.fit_transform(x_train.values, y_train.values.ravel())
+# z scaling
+scaler = StandardScaler()
+x_train = scaler.fit_transform(x_train)
 
-# # adjust test for features chosen
-# x_test = x_test.drop(sensor_names, axis=1, level=0)
-# x_test = x_test.reset_index()
-# x_test = x_test[features_chosen]
-# x_test = np.array(x_test)
+print("Finished feature selection")
 
-# # z scaling
-# scaler = StandardScaler()
-# x_train = scaler.fit_transform(x_train)
+# model
 
-# print("Finished feature selection")
+print("Accuracy: ", np.mean(cross_val_score(
+    model, x_train, y_train.values.ravel(), cv=4)))
 
-# # model
+model.fit(x_train, y_train.values.ravel())
 
-# print("Accuracy: ", np.mean(cross_val_score(
-#     model, x_train, y_train.values.ravel(), cv=10)))
+# predict y_test
+y_pred = model.predict(x_test)
 
-# model.fit(x_train, y_train.values.ravel())
+# make state in submission csv our prediction
+submission["state"] = y_pred
 
-# # predict y_test
-# y_pred = model.predict(x_test)
-
-# # make state in submission csv our prediction
-# submission["state"] = y_pred
-
-# # write to csv for kaggle submission
-# os.makedirs('submissions/svc', exist_ok=True)
-# submission.to_csv('submissions/svc/out.csv', index=False)
+# write to csv for kaggle submission
+os.makedirs('submissions/svc', exist_ok=True)
+submission.to_csv('submissions/svc/out.csv', index=False)

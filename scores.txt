@@ -74,6 +74,9 @@ Boosting (SelectKBest(k=26)):
 
     Accuracy:  0.8270178403076205 (SelectKBest(k=64))
 
+    Features chosen:  ['sensor_02_std', 'sensor_02_max', 'sensor_04_mean']
+    Accuracy:  0.7325552091930181
+
 RF:
     feature selection
     selector = SelectKBest(mutual_info_classif, k=6)

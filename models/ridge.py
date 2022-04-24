@@ -1,13 +1,11 @@
 import os
+from sklearn.feature_selection import SequentialFeatureSelector
+from sklearn.linear_model import RidgeClassifier
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import RandomizedSearchCV, cross_val_score
+from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.ensemble import AdaBoostClassifier
-from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif, SequentialFeatureSelector
-from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.model_selection import RandomizedSearchCV
 from time import time
 
 # load training & test from csv
@@ -57,8 +55,7 @@ x_test = x_test.drop(sensor_names, axis=1, level=0)
 x_test = x_test.reset_index()
 
 # feature selection & model creation
-model = HistGradientBoostingClassifier(max_iter=500, min_samples_leaf=200,
-                                       random_state=42, verbose=3)
+model = RidgeClassifier()
 
 # remove subject from features
 x_train = x_train.drop("subject", axis=1, level=0)
@@ -73,6 +70,10 @@ end_time = time()
 # runtime of subset selection
 print("Total selection time: ", end_time-start_time)
 
+# remove subject from features
+x_train = x_train.drop("subject", axis=1, level=0)
+x_test = x_test.drop("subject", axis=1, level=0)
+
 # get which features we want for test
 mask = selector.get_support()
 features_chosen_multi_index = x_train.columns[mask]
@@ -82,9 +83,6 @@ print("Features chosen: ", features_chosen)
 
 # transform x_train for training
 x_train = selector.transform(x_train)
-
-# fit the model
-model.fit(x_train, y_train.values.ravel())
 
 # adjust test for features chosen
 x_test = x_test.drop(sensor_names, axis=1, level=0)
@@ -98,11 +96,10 @@ x_train = scaler.fit_transform(x_train)
 
 print("Finished feature selection")
 
-# model scoring
+# model
 print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=4, verbose=1)))
+    model, x_train, y_train.values.ravel(), cv=10)))
 
-# fitting for prediction
 model.fit(x_train, y_train.values.ravel())
 
 # predict y_test
@@ -112,5 +109,5 @@ y_pred = model.predict(x_test)
 submission["state"] = y_pred
 
 # write to csv for kaggle submission
-os.makedirs('submissions/boosting', exist_ok=True)
-submission.to_csv('submissions/boosting/out.csv', index=False)
+os.makedirs('submissions/ridge', exist_ok=True)
+submission.to_csv('submissions/ridge/out.csv', index=False)

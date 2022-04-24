@@ -4,8 +4,9 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import cross_val_score
-from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif, SequentialFeatureSelector
+from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.preprocessing import StandardScaler
+from time import time
 
 # load training & test from csv
 x_train = pd.read_csv('data/train.csv')
@@ -19,11 +20,11 @@ sensor_names = ["sensor_00", "sensor_01", "sensor_02", "sensor_03", "sensor_04",
 submission = pd.DataFrame(
     columns=["sequence"], data=x_test[["sequence"]].groupby(np.arange(len(x_test[["sequence"]])) // 60).mean())
 
+# change index of train and test
 x_train = x_train.pivot(
     index=["sequence", "subject"], columns="step", values=sensor_names)
 x_test = x_test.pivot(
     index=["sequence", "subject"], columns="step", values=sensor_names)
-
 
 # create new features for the mean,std,var,max,min,and sum of each sensor values
 for i in sensor_names:
@@ -55,21 +56,29 @@ x_train = x_train.reset_index()
 x_test = x_test.drop(sensor_names, axis=1, level=0)
 x_test = x_test.reset_index()
 
-# feature selection
-
 # remove subject from features
 x_train = x_train.drop("subject", axis=1, level=0)
 x_test = x_test.drop("subject", axis=1, level=0)
 
-# select k best features based on mutual_classfi
-selector = SelectKBest(k=26, score_func=f_classif)
-selector.fit(x_train, y_train.values.ravel())
+# feature selection & model creation
+model = BaggingClassifier(KNeighborsClassifier(
+    n_neighbors=5), n_jobs=-1, verbose=1, max_samples=0.3, max_features=0.5, random_state=42)
+
+# forward subset selection
+start_time = time()
+selector = SequentialFeatureSelector(
+    model, direction="forward").fit(x_train, y_train.values.ravel())
+end_time = time()
+
+# runtime of subset selection
+print("Total selection time: ", end_time-start_time)
 
 # get which features we want for test
 mask = selector.get_support()
 features_chosen_multi_index = x_train.columns[mask]
 features_chosen = [feature_tuple[0]
                    for feature_tuple in features_chosen_multi_index]
+print("Features chosen: ", features_chosen)
 
 # transform x_train for training
 x_train = selector.fit_transform(x_train.values, y_train.values.ravel())
@@ -86,13 +95,9 @@ x_train = scaler.fit_transform(x_train)
 
 print("Finished feature selection")
 
-# model
-model = BaggingClassifier(KNeighborsClassifier(
-    n_neighbors=5), n_jobs=-1, verbose=1, max_samples=0.3, max_features=0.5, random_state=42)
-
 # model scoring
 print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=10)))
+    model, x_train, y_train.values.ravel(), cv=4)))
 
 # fitting for prediction
 model.fit(x_train, y_train.values.ravel())
