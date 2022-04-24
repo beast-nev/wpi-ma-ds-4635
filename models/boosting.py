@@ -74,9 +74,9 @@ print("Total selection time: ", end_time-start_time)
 
 # get which features we want for test
 mask = selector.get_support()
-features_chosen_multi_index = x_train.columns[mask]
-features_chosen = [feature_tuple[0]
-                   for feature_tuple in features_chosen_multi_index]
+features_chosen_mask = x_train.columns[mask]
+features_chosen = [feature
+                   for feature in features_chosen_mask]
 print("Features chosen: ", features_chosen)
 
 # transform x_train for training
@@ -96,7 +96,7 @@ print("Finished feature selection")
 
 # model scoring
 print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=4, verbose=1)))
+    model, x_train, y_train.values.ravel(), cv=5, verbose=1)))
 
 # fitting for prediction
 model.fit(x_train, y_train.values.ravel())

@@ -52,26 +52,27 @@ for i in sensor_names:
     x_test[i+"_sum"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).sum()
 
-print(x_train.head(3))
-print(x_train.shape)
-print(x_test.head(3))
-print(x_test.shape)
+# print(x_train.head(3))
+# print(x_train.shape)
+# print(x_test.head(3))
+# print(x_test.shape)
 
 # feature selection & model creation
 model = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
 
-# nca
-nca = PCA(random_state=42, n_components=5)
-nca.fit(x_train, y_train.values.ravel())
+# pca
+pca = PCA(random_state=42, n_components=3)
+pca.fit(x_train, y_train.values.ravel())
+print("Explained Variance ratio:", pca.explained_variance_ratio_)
 
 # transform x_train for training
-x_train = nca.transform(x_train)
+x_train = pca.transform(x_train)
 
 # fit the model
 model.fit(x_train, y_train.values.ravel())
 
 # adjust test for features chosen
-x_test = nca.transform(x_test)
+x_test = pca.transform(x_test)
 x_test = np.array(x_test)
 
 # z scaling
@@ -82,7 +83,7 @@ print("Finished feature selection")
 
 # model scoring
 print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=4, verbose=1, n_jobs=-1)))
+    model, x_train, y_train.values.ravel(), cv=5, verbose=1, n_jobs=-1)))
 
 # fitting for prediction
 model.fit(x_train, y_train.values.ravel())

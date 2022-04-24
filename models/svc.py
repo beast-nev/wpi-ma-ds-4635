@@ -56,35 +56,35 @@ for i in sensor_names:
     x_test[i+"_sum"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).sum()
 
-print(x_train.head(3))
-print(x_train.shape)
-print(x_test.head(3))
-print(x_test.shape)
+# print(x_train.head(3))
+# print(x_train.shape)
+# print(x_test.head(3))
+# print(x_test.shape)
 
 # feature selection & model creation
 model = OneVsRestClassifier(SVC(kernel="rbf", random_state=42, verbose=0))
 
-# # forward subset selection
-# start_time = time()
-# selector = SequentialFeatureSelector(
-#     model, direction="forward", n_features_to_select=5).fit(x_train, y_train.values.ravel())
-# end_time = time()
+# forward subset selection
+start_time = time()
+selector = SequentialFeatureSelector(
+    model, direction="forward", n_features_to_select=3).fit(x_train, y_train.values.ravel())
+end_time = time()
 
-# # runtime of subset selection
-# print("Total selection time: ", end_time-start_time)
+# runtime of subset selection
+print("Total selection time: ", end_time-start_time)
 
-# # get which features we want for test
-# mask = selector.get_support()
-# features_chosen_multi_index = x_train.columns[mask]
-# features_chosen = [feature_tuple[0]
-#                    for feature_tuple in features_chosen_multi_index]
-# print("Features chosen: ", features_chosen)
+# get which features we want for test
+mask = selector.get_support()
+features_chosen_mask = x_train.columns[mask]
+features_chosen = [feature
+                   for feature in features_chosen_mask]
+print("Features chosen: ", features_chosen)
 
-# # transform x_train for training
-# x_train = selector.transform(x_train)
+# transform x_train for training
+x_train = selector.transform(x_train)
 
-# # adjust test for features chosen
-# x_test = x_test[features_chosen]
+# adjust test for features chosen
+x_test = x_test[features_chosen]
 x_test = np.array(x_test)
 
 # z scaling
@@ -94,7 +94,7 @@ x_train = scaler.fit_transform(x_train)
 print("Finished feature selection")
 
 print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=4)))
+    model, x_train, y_train.values.ravel(), cv=5)))
 
 model.fit(x_train, y_train.values.ravel())
 
