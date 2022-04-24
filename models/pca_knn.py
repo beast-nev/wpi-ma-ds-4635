@@ -1,12 +1,11 @@
-from sklearn.ensemble import BaggingClassifier
-from sklearn.neighbors import KNeighborsClassifier
 import os
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import cross_val_score
-from sklearn.feature_selection import SequentialFeatureSelector
+from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from time import time
+from sklearn.neighbors import NeighborhoodComponentsAnalysis
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import cross_val_score
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -59,30 +58,20 @@ print(x_test.head(3))
 print(x_test.shape)
 
 # feature selection & model creation
-model = BaggingClassifier(KNeighborsClassifier(
-    n_neighbors=5), n_jobs=-1, verbose=1, max_samples=0.3, max_features=0.5, random_state=42)
+model = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
 
-# forward subset selection
-start_time = time()
-selector = SequentialFeatureSelector(
-    model, direction="forward", n_features_to_select=15).fit(x_train, y_train.values.ravel())
-end_time = time()
-
-# runtime of subset selection
-print("Total selection time: ", end_time-start_time)
-
-# get which features we want for test
-mask = selector.get_support()
-features_chosen_multi_index = x_train.columns[mask]
-features_chosen = [feature_tuple[0]
-                   for feature_tuple in features_chosen_multi_index]
-print("Features chosen: ", features_chosen)
+# nca
+nca = PCA(random_state=42, n_components=5)
+nca.fit(x_train, y_train.values.ravel())
 
 # transform x_train for training
-x_train = selector.fit_transform(x_train.values, y_train.values.ravel())
+x_train = nca.transform(x_train)
+
+# fit the model
+model.fit(x_train, y_train.values.ravel())
 
 # adjust test for features chosen
-x_test = x_test[features_chosen]
+x_test = nca.transform(x_test)
 x_test = np.array(x_test)
 
 # z scaling
@@ -93,7 +82,7 @@ print("Finished feature selection")
 
 # model scoring
 print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=4)))
+    model, x_train, y_train.values.ravel(), cv=4, verbose=1, n_jobs=-1)))
 
 # fitting for prediction
 model.fit(x_train, y_train.values.ravel())
@@ -105,5 +94,5 @@ y_pred = model.predict(x_test)
 submission["state"] = y_pred
 
 # write to csv for kaggle submission
-os.makedirs('submissions/bagging', exist_ok=True)
-submission.to_csv('submissions/bagging/out.csv', index=False)
+os.makedirs('submissions/pca_knn', exist_ok=True)
+submission.to_csv('submissions/pca_knn/out.csv', index=False)

@@ -19,6 +19,7 @@ sensor_names = ["sensor_00", "sensor_01", "sensor_02", "sensor_03", "sensor_04",
 # creating submission csv
 submission = pd.DataFrame(
     columns=["sequence"], data=x_test[["sequence"]].groupby(np.arange(len(x_test[["sequence"]])) // 60).mean())
+submission["sequence"] = submission["sequence"].astype(int)
 
 # change index of train and test
 x_train = x_train.pivot(
