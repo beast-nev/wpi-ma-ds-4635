@@ -1,17 +1,13 @@
-from collections import Counter
 import os
 from statistics import mode
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.neighbors import NeighborhoodComponentsAnalysis
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
-from sklearn.preprocessing import MinMaxScaler, RobustScaler, normalize, minmax_scale
 from sklearn.utils import resample
-
+from sklearn.naive_bayes import GaussianNB
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -75,7 +71,7 @@ x_test = scaler.fit_transform(x_test)
 x_train, y_train = resample(x_train, y_train, random_state=42)
 
 # feature selection & model creation
-model = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
+model = GaussianNB()
 
 # pca
 pca = PCA(random_state=42, n_components=52)
@@ -112,5 +108,5 @@ y_pred = model.predict(x_test)
 submission["state"] = y_pred
 
 # write to csv for kaggle submission
-os.makedirs('submissions/pca_knn', exist_ok=True)
-submission.to_csv('submissions/pca_knn/out.csv', index=False)
+os.makedirs('submissions/lda', exist_ok=True)
+submission.to_csv('submissions/lda/out.csv', index=False)
