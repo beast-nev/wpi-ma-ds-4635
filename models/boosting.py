@@ -7,6 +7,8 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.feature_selection import SequentialFeatureSelector
 from time import time
+from sklearn.model_selection import cross_val_score
+from sklearn.metrics import roc_auc_score, average_precision_score
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -41,6 +43,12 @@ for i in sensor_names:
         np.arange(len(x_train_load[i])) // 60).min()
     x_train[i+"_sum"] = x_train_load[i].groupby(
         np.arange(len(x_train_load[i])) // 60).sum()
+    x_train[i+"_median"] = x_train_load[i].groupby(
+        np.arange(len(x_train_load[i])) // 60).median()
+    x_train[i+"_q1"] = x_train_load[i].groupby(
+        np.arange(len(x_train_load[i])) // 60).quantile(0.25)
+    x_train[i+"_q3"] = x_train_load[i].groupby(
+        np.arange(len(x_train_load[i])) // 60).quantile(0.75)
 
     x_test[i+"_mean"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).mean()
@@ -52,6 +60,12 @@ for i in sensor_names:
         np.arange(len(x_test_load[i])) // 60).min()
     x_test[i+"_sum"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).sum()
+    x_test[i+"_median"] = x_test_load[i].groupby(
+        np.arange(len(x_test_load[i])) // 60).median()
+    x_test[i+"_q1"] = x_test_load[i].groupby(
+        np.arange(len(x_test_load[i])) // 60).quantile(0.25)
+    x_test[i+"_q3"] = x_test_load[i].groupby(
+        np.arange(len(x_test_load[i])) // 60).quantile(0.75)
 
 print(x_train.head(3))
 print(x_train.shape)
@@ -65,7 +79,7 @@ model = HistGradientBoostingClassifier(max_iter=500, min_samples_leaf=250,
 # forward subset selection
 start_time = time()
 selector = SequentialFeatureSelector(
-    model, direction="forward", n_features_to_select=10).fit(x_train, y_train.values.ravel())
+    model, direction="forward", n_features_to_select=15).fit(x_train, y_train.values.ravel())
 end_time = time()
 
 
@@ -73,6 +87,9 @@ end_time = time()
 print("Total selection time: ", end_time-start_time)
 
 # get which features we want for test
+# 'sensor_00_mean', 'sensor_00_std', 'sensor_01_q1', 'sensor_02_std', 'sensor_02_q3', 'sensor_04_mean', 'sensor_04_max',
+# 'sensor_04_q3', 'sensor_05_mean', 'sensor_08_std', 'sensor_10_mean', 'sensor_10_max', 'sensor_10_q1', 'sensor_12_min',
+# 'sensor_12_q1'
 mask = selector.get_support()
 features_chosen_mask = x_train.columns[mask]
 features_chosen = [feature
@@ -86,20 +103,26 @@ x_train = selector.transform(x_train)
 model.fit(x_train, y_train.values.ravel())
 
 x_test = x_test[features_chosen]
-x_test = np.array(x_test)
 
 # z scaling
 scaler = StandardScaler()
 x_train = scaler.fit_transform(x_train)
+x_test = scaler.fit_transform(x_test)
 
 print("Finished feature selection")
 
 # model scoring
 print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=5, verbose=1)))
+    model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
 
 # fitting for prediction
 model.fit(x_train, y_train.values.ravel())
+
+y_pred_train = model.predict(x_train)
+
+print("Average precision score: ", average_precision_score(y_train, y_pred_train))
+print("Roc score: ", roc_auc_score(y_train, y_pred_train))
+
 
 # predict y_test
 y_pred = model.predict(x_test)
@@ -110,5 +133,3 @@ submission["state"] = y_pred
 # write to csv for kaggle submission
 os.makedirs('submissions/boosting', exist_ok=True)
 submission.to_csv('submissions/boosting/out.csv', index=False)
-
-print(selector.n_features_to_select_)

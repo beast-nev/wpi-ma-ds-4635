@@ -1,4 +1,5 @@
 import os
+from statistics import mode
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
@@ -6,6 +7,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NeighborhoodComponentsAnalysis
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score
+from sklearn.metrics import roc_auc_score, average_precision_score
+
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -40,6 +43,12 @@ for i in sensor_names:
         np.arange(len(x_train_load[i])) // 60).min()
     x_train[i+"_sum"] = x_train_load[i].groupby(
         np.arange(len(x_train_load[i])) // 60).sum()
+    x_train[i+"_median"] = x_train_load[i].groupby(
+        np.arange(len(x_train_load[i])) // 60).median()
+    x_train[i+"_q1"] = x_train_load[i].groupby(
+        np.arange(len(x_train_load[i])) // 60).quantile(0.25)
+    x_train[i+"_q3"] = x_train_load[i].groupby(
+        np.arange(len(x_train_load[i])) // 60).quantile(0.75)
 
     x_test[i+"_mean"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).mean()
@@ -51,6 +60,12 @@ for i in sensor_names:
         np.arange(len(x_test_load[i])) // 60).min()
     x_test[i+"_sum"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).sum()
+    x_test[i+"_median"] = x_test_load[i].groupby(
+        np.arange(len(x_test_load[i])) // 60).median()
+    x_test[i+"_q1"] = x_test_load[i].groupby(
+        np.arange(len(x_test_load[i])) // 60).quantile(0.25)
+    x_test[i+"_q3"] = x_test_load[i].groupby(
+        np.arange(len(x_test_load[i])) // 60).quantile(0.75)
 
 # print(x_train.head(3))
 # print(x_train.shape)
@@ -61,7 +76,7 @@ for i in sensor_names:
 model = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
 
 # pca
-pca = PCA(random_state=42, n_components=3)
+pca = PCA(random_state=42, n_components=30)
 pca.fit(x_train, y_train.values.ravel())
 print("Explained Variance ratio:", pca.explained_variance_ratio_)
 
@@ -73,20 +88,25 @@ model.fit(x_train, y_train.values.ravel())
 
 # adjust test for features chosen
 x_test = pca.transform(x_test)
-x_test = np.array(x_test)
 
 # z scaling
 scaler = StandardScaler()
 x_train = scaler.fit_transform(x_train)
+x_test = scaler.fit_transform(x_test)
 
 print("Finished feature selection")
 
 # model scoring
 print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=5, verbose=1, n_jobs=-1)))
+    model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
 
 # fitting for prediction
 model.fit(x_train, y_train.values.ravel())
+
+y_pred_train = model.predict(x_train)
+
+print("Average precision score: ", average_precision_score(y_train, y_pred_train))
+print("Roc score: ", roc_auc_score(y_train, y_pred_train))
 
 # predict y_test
 y_pred = model.predict(x_test)

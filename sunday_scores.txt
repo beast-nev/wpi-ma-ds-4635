@@ -1,0 +1,23 @@
+cv=5, n_jobs=-1,z-scaling, 
+
+PCA_KNN:
+    Accuracy:  0.6731746128140715
+    Average precision score:  0.7293440870874516
+    Roc score:  0.7801288817622067
+Ridge:
+    Accuracy:  0.6150257140232241
+    Average precision score:  0.5780819810370852
+    Roc score:  0.6180942204045339
+PCA_SVC:
+    Accuracy:  0.6774104028103944
+    Average precision score:  0.6666757374650829
+    Roc score:  0.7145856676385064
+Bagging KNN:
+    Accuracy:  0.7668669006684674
+    Average precision score:  0.7489281674154934
+    Roc score:  0.809808591068741
+Boosting:
+    Accuracy:  0.8189693984697419
+    Average precision score:  0.8174614714599496
+    Roc score:  0.8729203374027031
+RF:
