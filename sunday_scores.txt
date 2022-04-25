@@ -1,9 +1,23 @@
-cv=5, n_jobs=-1,z-scaling, 
+cv=5, n_jobs=-1
 
 PCA_KNN:
-    Accuracy:  0.6731746128140715
-    Average precision score:  0.7293440870874516
-    Roc score:  0.7801288817622067
+    StandardScaler
+        Accuracy:  0.6731746128140715
+        Average precision score:  0.7293440870874516
+        Roc score:  0.7801288817622067
+    MinMaxScaler:
+        Accuracy:  0.6768717789809318
+        Average precision score:  0.7298407486552668
+        Roc score:  0.7815788825558794
+    RobustScaler:
+        Accuracy:  0.6719803123499162
+        Average precision score:  0.7194403873369631
+        Roc score:  0.7719935768748132
+
+    After Change of location for StandardScaler:
+        Accuracy:  0.7133008498081115
+        Average precision score:  0.7632729458759625
+        Roc score:  0.8155606357723713
 Ridge:
     Accuracy:  0.6150257140232241
     Average precision score:  0.5780819810370852
@@ -16,8 +30,38 @@ Bagging KNN:
     Accuracy:  0.7668669006684674
     Average precision score:  0.7489281674154934
     Roc score:  0.809808591068741
+PCA_Bagging_KNN:
+    n_estimators = 100
+        Accuracy:  0.7434535441766823
+        Average precision score:  0.7644467582724823
+        Roc score:  0.817094595032264
+    n_estimators = 500:
+        Accuracy:  0.7538895217570586
+        Average precision score:  0.7703735101313817
+        Roc score:  0.8221778014669492
 Boosting:
     Accuracy:  0.8189693984697419
     Average precision score:  0.8174614714599496
     Roc score:  0.8729203374027031
+PCA_Boosting:
+    StandardScaler:
+        Accuracy:  0.7884319187710183
+        Average precision score:  0.8282566319783584
+        Roc score:  0.8796833715897789
+    MinMaxScaler:
+        Accuracy:  0.7955176991389952
+        Average precision score:  0.8427821611996645
+        Roc score:  0.8915813610923725
+    RobustScaler: 
+        Accuracy:  0.7995996283910815
+        Average precision score:  0.8321119049127318
+        Roc score:  0.8835268115080115
+
 RF:
+    Accuracy:  0.733710295864201
+    Average precision score:  0.9989265494050098
+    Roc score:  0.9989624776481494
+PCA_RF:
+    Accuracy:  0.7799217290002886
+    Average precision score:  1.0
+    Roc score:  1.0

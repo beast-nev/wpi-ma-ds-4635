@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectKBest, mutual_info_classif, SequentialFeatureSelector
 from sklearn.model_selection import RandomizedSearchCV
@@ -72,36 +73,45 @@ print(x_train.shape)
 print(x_test.head(3))
 print(x_test.shape)
 
-# feature selection & model creation
-model = RandomForestClassifier(
-    n_estimators=500, verbose=0, n_jobs=-1, max_depth=25)
-
-# forward subset selection
-start_time = time()
-selector = SequentialFeatureSelector(
-    model, direction="forward", n_features_to_select=3).fit(x_train, y_train.values.ravel())
-end_time = time()
-
-# runtime of subset selection
-print("Total selection time: ", end_time-start_time)
-
-# get which features we want for test
-mask = selector.get_support()
-features_chosen_mask = x_train.columns[mask]
-features_chosen = [feature
-                   for feature in features_chosen_mask]
-print("Features chosen: ", features_chosen)
-
-# transform x_train for training
-x_train = selector.transform(x_train)
-
-x_test = x_test[features_chosen]
-
 # z scaling
 scaler = StandardScaler()
 x_train = scaler.fit_transform(x_train)
 x_test = scaler.fit_transform(x_test)
 
+# feature selection & model creation
+model = RandomForestClassifier(
+    n_estimators=500, verbose=0, n_jobs=-1, max_depth=25)
+
+# pca
+pca = PCA(random_state=42, n_components=52)
+pca.fit(x_train, y_train.values.ravel())
+print("Explained Variance ratio:", pca.explained_variance_ratio_)
+
+# transform x_train for training
+x_train = pca.transform(x_train)
+
+# # forward subset selection
+# start_time = time()
+# selector = SequentialFeatureSelector(
+#     model, direction="forward", n_features_to_select=52, n_jobs=-1).fit(x_train, y_train.values.ravel())
+# end_time = time()
+# # 'sensor_02_std', 'sensor_04_sum', 'sensor_04_q3'
+
+# # runtime of subset selection
+# print("Total selection time: ", end_time-start_time)
+
+# # get which features we want for test
+# mask = selector.get_support()
+# features_chosen_mask = x_train.columns[mask]
+# features_chosen = [feature
+#                    for feature in features_chosen_mask]
+# print("Features chosen: ", features_chosen)
+
+# # transform x_train for training
+# x_train = selector.transform(x_train)
+
+# x_test = x_test[features_chosen]
+x_test = pca.transform(x_test)
 print("Finished feature selection")
 
 print("Accuracy: ", np.mean(cross_val_score(

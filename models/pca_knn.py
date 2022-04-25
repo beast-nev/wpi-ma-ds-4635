@@ -8,6 +8,7 @@ from sklearn.neighbors import NeighborhoodComponentsAnalysis
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.preprocessing import MinMaxScaler, RobustScaler, normalize, minmax_scale
 
 
 # load training & test from csv
@@ -67,6 +68,11 @@ for i in sensor_names:
     x_test[i+"_q3"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).quantile(0.75)
 
+# scaling
+scaler = StandardScaler()
+x_train = scaler.fit_transform(x_train)
+x_test = scaler.fit_transform(x_test)
+
 # print(x_train.head(3))
 # print(x_train.shape)
 # print(x_test.head(3))
@@ -88,11 +94,6 @@ model.fit(x_train, y_train.values.ravel())
 
 # adjust test for features chosen
 x_test = pca.transform(x_test)
-
-# z scaling
-scaler = StandardScaler()
-x_train = scaler.fit_transform(x_train)
-x_test = scaler.fit_transform(x_test)
 
 print("Finished feature selection")
 
