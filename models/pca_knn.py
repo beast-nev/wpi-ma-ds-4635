@@ -10,8 +10,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.preprocessing import MinMaxScaler, RobustScaler, normalize, minmax_scale
-import imblearn
 from sklearn.utils import resample
+import matplotlib.pyplot as plt
 
 
 # load training & test from csv
@@ -45,14 +45,10 @@ for i in sensor_names:
         np.arange(len(x_train_load[i])) // 60).max()
     x_train[i+"_min"] = x_train_load[i].groupby(
         np.arange(len(x_train_load[i])) // 60).min()
-    x_train[i+"_sum"] = x_train_load[i].groupby(
-        np.arange(len(x_train_load[i])) // 60).sum()
     x_train[i+"_median"] = x_train_load[i].groupby(
         np.arange(len(x_train_load[i])) // 60).median()
-    x_train[i+"_q1"] = x_train_load[i].groupby(
-        np.arange(len(x_train_load[i])) // 60).quantile(0.25)
-    x_train[i+"_q3"] = x_train_load[i].groupby(
-        np.arange(len(x_train_load[i])) // 60).quantile(0.75)
+    x_train[i+"_iqr"] = x_train_load[i].groupby(
+        np.arange(len(x_train_load[i])) // 60).quantile(0.75) - x_train_load[i].groupby(np.arange(len(x_train_load[i])) // 60).quantile(0.25)
 
     x_test[i+"_mean"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).mean()
@@ -62,14 +58,15 @@ for i in sensor_names:
         np.arange(len(x_test_load[i])) // 60).max()
     x_test[i+"_min"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).min()
-    x_test[i+"_sum"] = x_test_load[i].groupby(
-        np.arange(len(x_test_load[i])) // 60).sum()
     x_test[i+"_median"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).median()
-    x_test[i+"_q1"] = x_test_load[i].groupby(
-        np.arange(len(x_test_load[i])) // 60).quantile(0.25)
-    x_test[i+"_q3"] = x_test_load[i].groupby(
-        np.arange(len(x_test_load[i])) // 60).quantile(0.75)
+    x_test[i+"_irq"] = x_test_load[i].groupby(
+        np.arange(len(x_test_load[i])) // 60).quantile(0.75) - x_test_load[i].groupby(np.arange(len(x_test_load[i])) // 60).quantile(0.25)
+
+print(x_train.head(3))
+print(x_train.shape)
+print(x_test.head(3))
+print(x_test.shape)
 
 # scaling
 scaler = StandardScaler()
@@ -78,10 +75,6 @@ x_test = scaler.fit_transform(x_test)
 
 x_train, y_train = resample(x_train, y_train, random_state=42)
 
-# print(x_train.head(3))
-# print(x_train.shape)
-# print(x_test.head(3))
-# print(x_test.shape)
 
 # feature selection & model creation
 model = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
