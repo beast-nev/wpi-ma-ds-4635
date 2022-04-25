@@ -4,12 +4,14 @@ import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import BaggingClassifier, GradientBoostingClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.feature_selection import SequentialFeatureSelector
 from time import time
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.utils import resample
+
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -68,55 +70,59 @@ for i in sensor_names:
     x_test[i+"_q3"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).quantile(0.75)
 
-print(x_train.head(3))
-print(x_train.shape)
-print(x_test.head(3))
-print(x_test.shape)
+print("Finished creating features")
+# print(x_train.head(3))
+# print(x_train.shape)
+# print(x_test.head(3))
+# print(x_test.shape)
 
 # z scaling
 scaler = StandardScaler()
 x_train = scaler.fit_transform(x_train)
 x_test = scaler.fit_transform(x_test)
 
+x_train, y_train = resample(x_train, y_train, random_state=42)
+print("Finished resampling")
+
 # feature selection & model creation
-model = HistGradientBoostingClassifier(max_iter=500, min_samples_leaf=500,
-                                       random_state=42, verbose=0)
+model = BaggingClassifier(HistGradientBoostingClassifier(max_iter=1000, min_samples_leaf=250,
+                                                         random_state=42, verbose=0, max_depth=15, max_leaf_nodes=25))
 
-# # forward subset selection
-# start_time = time()
-# selector = SequentialFeatureSelector(
-#     model, direction="forward", n_features_to_select=52, n_jobs=-1).fit(x_train, y_train.values.ravel())
-# end_time = time()
+# forward subset selection
+start_time = time()
+selector = SequentialFeatureSelector(
+    model, direction="backward", n_features_to_select=80, n_jobs=-1).fit(x_train, y_train.values.ravel())
+end_time = time()
 
-# # runtime of subset selection
-# print("Total selection time: ", end_time-start_time)
+# runtime of subset selection
+print("Total selection time: ", end_time-start_time)
 
-# # get which features we want for test
-# # 'sensor_00_mean', 'sensor_00_std', 'sensor_01_q1', 'sensor_02_std', 'sensor_02_q3', 'sensor_04_mean', 'sensor_04_max',
-# # 'sensor_04_q3', 'sensor_05_mean', 'sensor_08_std', 'sensor_10_mean', 'sensor_10_max', 'sensor_10_q1', 'sensor_12_min',
-# # 'sensor_12_q1'
-# mask = selector.get_support()
-# features_chosen_mask = x_train.columns[mask]
-# features_chosen = [feature
-#                    for feature in features_chosen_mask]
-# print("Features chosen: ", features_chosen)
-
-# # transform x_train for training
-# x_train = selector.transform(x_train)
-
-# pca
-pca = PCA(random_state=42, n_components=52)
-pca.fit(x_train, y_train.values.ravel())
-print("Explained Variance ratio:", pca.explained_variance_ratio_)
+# get which features we want for test
+# 'sensor_00_mean', 'sensor_00_std', 'sensor_01_q1', 'sensor_02_std', 'sensor_02_q3', 'sensor_04_mean', 'sensor_04_max',
+# 'sensor_04_q3', 'sensor_05_mean', 'sensor_08_std', 'sensor_10_mean', 'sensor_10_max', 'sensor_10_q1', 'sensor_12_min',
+# 'sensor_12_q1'
+mask = selector.get_support()
+features_chosen_mask = x_train.columns[mask]
+features_chosen = [feature
+                   for feature in features_chosen_mask]
+print("Features chosen: ", features_chosen)
 
 # transform x_train for training
-x_train = pca.transform(x_train)
+x_train = selector.transform(x_train)
+
+# # pca
+# pca = PCA(random_state=42, n_components=52)
+# pca.fit(x_train, y_train.values.ravel())
+# print("Explained Variance ratio:", pca.explained_variance_ratio_)
+
+# # transform x_train for training
+# x_train = pca.transform(x_train)
 
 # fit the model
 model.fit(x_train, y_train.values.ravel())
 
-# x_test = x_test[features_chosen]
-x_test = pca.transform(x_test)
+x_test = x_test[features_chosen]
+# x_test = pca.transform(x_test)
 
 print("Finished feature selection")
 
@@ -131,7 +137,6 @@ y_pred_train = model.predict(x_train)
 
 print("Average precision score: ", average_precision_score(y_train, y_pred_train))
 print("Roc score: ", roc_auc_score(y_train, y_pred_train))
-
 
 # predict y_test
 y_pred = model.predict(x_test)

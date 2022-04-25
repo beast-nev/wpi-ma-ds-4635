@@ -1,3 +1,4 @@
+from collections import Counter
 import os
 from statistics import mode
 import numpy as np
@@ -9,6 +10,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.preprocessing import MinMaxScaler, RobustScaler, normalize, minmax_scale
+import imblearn
+from sklearn.utils import resample
 
 
 # load training & test from csv
@@ -73,6 +76,8 @@ scaler = StandardScaler()
 x_train = scaler.fit_transform(x_train)
 x_test = scaler.fit_transform(x_test)
 
+x_train, y_train = resample(x_train, y_train, random_state=42)
+
 # print(x_train.head(3))
 # print(x_train.shape)
 # print(x_test.head(3))
@@ -82,7 +87,7 @@ x_test = scaler.fit_transform(x_test)
 model = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
 
 # pca
-pca = PCA(random_state=42, n_components=30)
+pca = PCA(random_state=42, n_components=52)
 pca.fit(x_train, y_train.values.ravel())
 print("Explained Variance ratio:", pca.explained_variance_ratio_)
 

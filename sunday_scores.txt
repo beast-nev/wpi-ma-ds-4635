@@ -18,6 +18,10 @@ PCA_KNN:
         Accuracy:  0.7133008498081115
         Average precision score:  0.7632729458759625
         Roc score:  0.8155606357723713
+    New run:
+        Accuracy:  0.760050625004588
+        Average precision score:  0.8131310414855599
+        Roc score:  0.8584198104059488
 Ridge:
     Accuracy:  0.6150257140232241
     Average precision score:  0.5780819810370852
@@ -40,9 +44,15 @@ PCA_Bagging_KNN:
         Average precision score:  0.7703735101313817
         Roc score:  0.8221778014669492
 Boosting:
-    Accuracy:  0.8189693984697419
-    Average precision score:  0.8174614714599496
-    Roc score:  0.8729203374027031
+    No-Resampling:
+        Accuracy:  0.8189693984697419
+        Average precision score:  0.8174614714599496
+        Roc score:  0.8729203374027031
+
+    Resampling:
+        Accuracy:  0.8934456657650797
+        Average precision score:  0.9877633753763132
+        Roc score:  0.9917203009795342
 PCA_Boosting:
     StandardScaler:
         Accuracy:  0.7884319187710183
@@ -62,6 +72,11 @@ RF:
     Average precision score:  0.9989265494050098
     Roc score:  0.9989624776481494
 PCA_RF:
-    Accuracy:  0.7799217290002886
-    Average precision score:  1.0
-    Roc score:  1.0
+    No-Resampling:
+        Accuracy:  0.7799217290002886
+        Average precision score:  1.0
+        Roc score:  1.0
+    Resampling:
+        Accuracy:  0.8993761929305475
+        Average precision score:  1.0
+        Roc score:  1.0

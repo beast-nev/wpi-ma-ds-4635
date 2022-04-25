@@ -13,6 +13,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from time import time
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.utils import resample
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -76,8 +77,10 @@ for i in sensor_names:
 # print(x_test.head(3))
 # print(x_test.shape)
 
+x_train, y_train = resample(x_train, y_train, random_state=42)
+
 # pca
-pca = PCA(random_state=42, n_components=30)
+pca = PCA(random_state=42, n_components=52)
 pca.fit(x_train, y_train.values.ravel())
 print("Explained Variance ratio:", pca.explained_variance_ratio_)
 

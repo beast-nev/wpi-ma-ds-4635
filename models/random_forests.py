@@ -10,6 +10,7 @@ from sklearn.preprocessing import StandardScaler
 from time import time
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.utils import resample
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -77,6 +78,8 @@ print(x_test.shape)
 scaler = StandardScaler()
 x_train = scaler.fit_transform(x_train)
 x_test = scaler.fit_transform(x_test)
+
+x_train, y_train = resample(x_train, y_train, random_state=42)
 
 # feature selection & model creation
 model = RandomForestClassifier(

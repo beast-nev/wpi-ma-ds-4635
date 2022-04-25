@@ -10,6 +10,7 @@ from sklearn.preprocessing import StandardScaler
 from time import time
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.utils import resample
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -68,15 +69,17 @@ for i in sensor_names:
     x_test[i+"_q3"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).quantile(0.75)
 
-print(x_train.head(3))
-print(x_train.shape)
-print(x_test.head(3))
-print(x_test.shape)
+# print(x_train.head(3))
+# print(x_train.shape)
+# print(x_test.head(3))
+# print(x_test.shape)
 
 # z scaling
 scaler = StandardScaler()
 x_train = scaler.fit_transform(x_train)
 x_test = scaler.fit_transform(x_test)
+
+x_train, y_train = resample(x_train, y_train, random_state=42)
 
 # feature selection & model creation
 model = BaggingClassifier(KNeighborsClassifier(
