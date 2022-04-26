@@ -1,21 +1,15 @@
-from itertools import combinations
 import os
-from socket import socket
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
-from sklearn.model_selection import GroupKFold, cross_val_score
-from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
-from sklearn.ensemble import BaggingClassifier, GradientBoostingClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.feature_selection import SequentialFeatureSelector
 from time import time
 from sklearn.model_selection import cross_val_score
-from sklearn.metrics import roc_auc_score, average_precision_score
-from sklearn.utils import resample
-from sklearn.metrics import classification_report
+from sklearn.metrics import roc_auc_score, average_precision_score, classification_report
 from sklearn.impute import SimpleImputer
-
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -39,6 +33,7 @@ submission = pd.DataFrame(
 x_train = pd.DataFrame()
 x_test = pd.DataFrame()
 
+# create features for mean, lag, std, min, max, median, and iqr
 for i in sensor_names:
     x_train[i+"_mean"] = x_train_load[i].groupby(
         np.arange(len(x_train_load[i])) // 60).mean()
@@ -70,35 +65,26 @@ for i in sensor_names:
     x_test[i+"_irq"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).quantile(0.75) - x_test_load[i].groupby(np.arange(len(x_test_load[i])) // 60).quantile(0.25)
 
-print("Finished creating features")
-
-print(x_train.head(5))
-print(x_train.shape)
-# x_train, y_train = resample(x_train, y_train, random_state=42)
+# take samples of our data
 x_train = x_train.sample(frac=1.0, random_state=42)
 y_train = y_train.sample(frac=1.0, random_state=42)
 x_test = x_test.sample(frac=1.0, random_state=42)
-print(x_train.head(5))
-print(x_train.shape)
 
-
-# print("Finished resampling")
-
+# features names for pca
 feature_names = x_train.columns
 
-# scaling
-# scaler = StandardScaler()
-# x_train = scaler.fit_transform(x_train)
-# x_test = scaler.fit_transform(x_test)
+# z transformation
+scaler = StandardScaler()
+x_train = scaler.fit_transform(x_train)
+x_test = scaler.fit_transform(x_test)
 
 # feature selection & model creation
-model = HistGradientBoostingClassifier(learning_rate=0.05, max_leaf_nodes=25,
+model = HistGradientBoostingClassifier(learning_rate=0.1, max_leaf_nodes=31,
                                        max_iter=1500, min_samples_leaf=250,
                                        l2_regularization=1,
                                        random_state=42, verbose=0, scoring="roc_auc")
-print("Finished model creation")
 
-# impute
+# impute nans
 imp = SimpleImputer(missing_values=np.nan, strategy="mean")
 x_train = imp.fit_transform(x_train)
 x_test = imp.fit_transform(x_test)
@@ -116,33 +102,17 @@ x_train = pca.transform(x_train)
 x_test = pca.transform(x_test)
 
 # get the index of the most important feature on EACH component
-# LIST COMPREHENSION HERE
 most_important = [np.abs(pca.components_[i]).argmax() for i in range(n_pcs)]
 
-initial_feature_names = feature_names
 # get the names
 most_important_names = [
-    initial_feature_names[most_important[i]] for i in range(n_pcs)]
+    feature_names[most_important[i]] for i in range(n_pcs)]
 
 # LIST COMPREHENSION HERE AGAIN
 dic = {'PC{}'.format(i): most_important_names[i] for i in range(n_pcs)}
 
 # build the dataframe
 df = pd.DataFrame(dic.items())
-# print(df[1])
-
-# fit the model
-
-# x_test = x_test[features_chosen]
-
-print("Finished feature selection")
-
-# group_cv = GroupKFold()
-
-# model scoring
-# print("Accuracy: ", np.mean(cross_val_score(
-#     model, x_train, y_train.values.ravel(), cv=group_cv, groups=x_train_load["subject"].groupby(
-#         np.arange(len(x_train_load["subject"])) // 60).mean(), n_jobs=6)))
 
 # print("Accuracy: ", np.mean(cross_val_score(
 #     model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
@@ -150,18 +120,24 @@ print("Finished feature selection")
 # fitting for prediction
 model.fit(x_train, y_train.values.ravel())
 
+# predict training values for training scoring
 y_pred_train = model.predict(x_train)
 
-print("Average precision score: ", average_precision_score(y_train, y_pred_train))
+# compute roc_auc and classification report
 print("Roc score: ", roc_auc_score(y_train, y_pred_train))
 print("Classification report: ", classification_report(
     y_true=y_train, y_pred=y_pred_train))
 
-# predict y_test
-y_pred = model.predict(x_test)
+# test predcition
+y_p = model.predict(x_test)
+
+# predict y_test probability
+y_pred = pd.DataFrame(data=model.predict_proba(x_test),
+                      columns=["state0", "state1"])
+y_pred["pred"] = np.max(y_pred.values, axis=1)
 
 # make state in submission csv our prediction
-submission["state"] = y_pred
+submission["state"] = y_pred["pred"]
 
 # write to csv for kaggle submission
 os.makedirs('submissions/boosting', exist_ok=True)
