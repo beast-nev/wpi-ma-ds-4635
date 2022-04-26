@@ -1,4 +1,5 @@
 from collections import Counter
+from itertools import combinations
 import os
 from statistics import mode
 import numpy as np
@@ -75,44 +76,80 @@ x_test = scaler.fit_transform(x_test)
 
 x_train, y_train = resample(x_train, y_train, random_state=42)
 
-
 # feature selection & model creation
 model = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
 
-# pca
-pca = PCA(random_state=42, n_components=52)
-pca.fit(x_train, y_train.values.ravel())
-print("Explained Variance ratio:", pca.explained_variance_ratio_)
+# # pca
+# pca = PCA(random_state=42, n_components=52)
+# pca.fit(x_train, y_train.values.ravel())
+# print("Explained Variance ratio:", pca.explained_variance_ratio_)
 
-# transform x_train for training
-x_train = pca.transform(x_train)
+# # transform x_train for training
+# x_train = pca.transform(x_train)
+# # adjust test for features chosen
+# x_test = pca.transform(x_test)
 
-# fit the model
-model.fit(x_train, y_train.values.ravel())
 
-# adjust test for features chosen
-x_test = pca.transform(x_test)
+def best_subset_finder(estimator, X, y, max_size=8, cv=5):
+    n_features = X.shape[1]
+    subsets = (combinations(range(n_features), k + 1)
+               for k in range(min(n_features, max_size)))
 
-print("Finished feature selection")
+    best_size_subset = []
+    for subsets_k in subsets:  # for each list of subsets of the same size
+        best_score = -np.inf
+        best_subset = None
+        for subset in subsets_k:  # for each subset
+            estimator.fit(X.iloc[:, list(subset)], y)
+            # get the subset with the best score among subsets of the same size
+            score = estimator.score(X.iloc[:, list(subset)], y)
+            if score > best_score:
+                best_score, best_subset = score, subset
+        # to compare subsets of different sizes we must use CV
+        # first store the best subset of each size
+        best_size_subset.append(best_subset)
 
-# model scoring
-print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
+    # compare best subsets of each size
+    best_score = -np.inf
+    best_subset = None
+    list_scores = []
+    for subset in best_size_subset:
+        score = cross_val_score(
+            estimator, X.iloc[:, list(subset)], y, cv=cv).mean()
+        list_scores.append(score)
+        if score > best_score:
+            best_score, best_subset = score, subset
 
-# fitting for prediction
-model.fit(x_train, y_train.values.ravel())
+    return best_subset, best_score, best_size_subset, list_scores
 
-y_pred_train = model.predict(x_train)
 
-print("Average precision score: ", average_precision_score(y_train, y_pred_train))
-print("Roc score: ", roc_auc_score(y_train, y_pred_train))
+subset, score, size, list_scores = best_subset_finder(
+    model, x_train, y_train, max_size=10, cv=5)
+print(subset, score, size, list_scores)
 
-# predict y_test
-y_pred = model.predict(x_test)
+# # fit the model
+# model.fit(x_train, y_train.values.ravel())
 
-# make state in submission csv our prediction
-submission["state"] = y_pred
+# print("Finished feature selection")
 
-# write to csv for kaggle submission
-os.makedirs('submissions/pca_knn', exist_ok=True)
-submission.to_csv('submissions/pca_knn/out.csv', index=False)
+# # model scoring
+# print("Accuracy: ", np.mean(cross_val_score(
+#     model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
+
+# # fitting for prediction
+# model.fit(x_train, y_train.values.ravel())
+
+# y_pred_train = model.predict(x_train)
+
+# print("Average precision score: ", average_precision_score(y_train, y_pred_train))
+# print("Roc score: ", roc_auc_score(y_train, y_pred_train))
+
+# # predict y_test
+# y_pred = model.predict(x_test)
+
+# # make state in submission csv our prediction
+# submission["state"] = y_pred
+
+# # write to csv for kaggle submission
+# os.makedirs('submissions/pca_knn', exist_ok=True)
+# submission.to_csv('submissions/pca_knn/out.csv', index=False)
