@@ -1,14 +1,12 @@
-from itertools import combinations
+from sklearn.model_selection import GridSearchCV
 import os
-from socket import socket
 import numpy as np
 import pandas as pd
+from scipy import rand
 from sklearn.decomposition import PCA
 from sklearn.model_selection import GroupKFold, cross_val_score
+from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
-from sklearn.ensemble import BaggingClassifier, GradientBoostingClassifier
-from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.feature_selection import SequentialFeatureSelector
 from time import time
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
@@ -40,6 +38,10 @@ x_test = pd.DataFrame()
 for i in sensor_names:
     x_train[i+"_mean"] = x_train_load[i].groupby(
         np.arange(len(x_train_load[i])) // 60).mean()
+    x_train[i+"_count"] = x_train_load[i].groupby(
+        np.arange(len(x_train_load[i])) // 60).count()
+    x_train[i+"_cummax"] = x_train_load[i].groupby(
+        np.arange(len(x_train_load[i])) // 60).cummax()
     x_train[i+"_std"] = x_train_load[i].groupby(
         np.arange(len(x_train_load[i])) // 60).std()
     x_train[i+"_max"] = x_train_load[i].groupby(
@@ -53,6 +55,10 @@ for i in sensor_names:
 
     x_test[i+"_mean"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).mean()
+    x_test[i+"_count"] = x_test_load[i].groupby(
+        np.arange(len(x_test_load[i])) // 60).count()
+    x_test[i+"_cummax"] = x_test_load[i].groupby(
+        np.arange(len(x_test_load[i])) // 60).cummax()
     x_test[i+"_std"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).std()
     x_test[i+"_max"] = x_test_load[i].groupby(
@@ -65,98 +71,46 @@ for i in sensor_names:
         np.arange(len(x_test_load[i])) // 60).quantile(0.75) - x_test_load[i].groupby(np.arange(len(x_test_load[i])) // 60).quantile(0.25)
 
 print("Finished creating features")
-# print(x_train.head(3))
-# print(x_train.shape)
-# print(x_test.head(3))
-# print(x_test.shape)
 
-# feature_names = x_train.columns
-
-x_train, y_train = resample(x_train, y_train, random_state=42)
-# print("Finished resampling")
+# # sample
+# x_train = x_train.sample(frac=1.0, random_state=42)
 
 # feature selection & model creation
-model = HistGradientBoostingClassifier(learning_rate=0.05, max_leaf_nodes=25,
-                                       max_iter=1000, min_samples_leaf=500,
-                                       l2_regularization=1,
-                                       random_state=4, verbose=0, scoring="loss")
-print("Finished model creation")
+mlp = MLPClassifier(max_iter=100, solver="adam")
+mlp_space = {
+    'hidden_layer_sizes': [(10, 30, 10), (30, 75, 20), (50, 100, 35), (20,), (50,), ],
+    'activation': ['relu', 'logistic'],
+    'alpha': [0.0001, 0.05, 0.1, 0.25],
+    'learning_rate': ['constant', 'adaptive'],
+}
+grid_search = GridSearchCV(mlp, mlp_space, n_jobs=-1, cv=5)
+# X is train samples and y is the corresponding labels
+grid_search.fit(x_train, y_train)
 
-# # forward subset selection
-# start_time = time()
-# selector = SequentialFeatureSelector(
-#     model, direction="backward", n_features_to_select=80, n_jobs=-1).fit(x_train, y_train.values.ravel())
-# end_time = time()
-
-# # runtime of subset selection
-# print("Total selection time: ", end_time-start_time)
-
-# get which features we want for test
-# 'sensor_00_mean', 'sensor_00_std', 'sensor_01_q1', 'sensor_02_std', 'sensor_02_q3', 'sensor_04_mean', 'sensor_04_max',
-# 'sensor_04_q3', 'sensor_05_mean', 'sensor_08_std', 'sensor_10_mean', 'sensor_10_max', 'sensor_10_q1', 'sensor_12_min',
-# 'sensor_12_q1'
-# mask = selector.get_support()
-# features_chosen_mask = x_train.columns[mask]
-# features_chosen = [feature
-#                    for feature in features_chosen_mask]
-# print("Features chosen: ", features_chosen)
+# # pca
+# pca = PCA(0.95, random_state=42)
+# pca.fit(x_train, y_train.values.ravel())
+# # print("Explained Variance ratio:", pca.explained_variance_ratio_)
 
 # # transform x_train for training
-# x_train = selector.transform(x_train)
+# x_train = pca.transform(x_train)
+# x_test = pca.transform(x_test)
 
-# pca
-pca = PCA(0.95, random_state=42)
-pca.fit(x_train, y_train.values.ravel())
-# print("Explained Variance ratio:", pca.explained_variance_ratio_)
+# print("Finished feature selection")
 
-# # number of components
-# n_pcs = pca.components_.shape[0]
-
-# transform x_train for training
-x_train = pca.transform(x_train)
-x_test = pca.transform(x_test)
-
-# # get the index of the most important feature on EACH component
-# # LIST COMPREHENSION HERE
-# most_important = [np.abs(pca.components_[i]).argmax() for i in range(n_pcs)]
-
-# initial_feature_names = feature_names
-# # get the names
-# most_important_names = [
-#     initial_feature_names[most_important[i]] for i in range(n_pcs)]
-
-# # LIST COMPREHENSION HERE AGAIN
-# dic = {'PC{}'.format(i): most_important_names[i] for i in range(n_pcs)}
-
-# # build the dataframe
-# df = pd.DataFrame(dic.items())
-
-# fit the model
-
-# x_test = x_test[features_chosen]
-
-print("Finished feature selection")
-
-# group_cv = GroupKFold()
-
-# model scoring
 # print("Accuracy: ", np.mean(cross_val_score(
-#     model, x_train, y_train.values.ravel(), cv=group_cv, groups=x_train_load["subject"].groupby(
-#         np.arange(len(x_train_load["subject"])) // 60).mean(), n_jobs=6)))
+#     model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
 
-print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
+# # fitting for prediction
+# model.fit(x_train, y_train.values.ravel())
 
-# fitting for prediction
-model.fit(x_train, y_train.values.ravel())
-
-y_pred_train = model.predict(x_train)
+y_pred_train = grid_search.predict(x_train)
 
 print("Average precision score: ", average_precision_score(y_train, y_pred_train))
 print("Roc score: ", roc_auc_score(y_train, y_pred_train))
 
 # predict y_test
-y_pred = model.predict(x_test)
+y_pred = grid_search.predict(x_test)
 
 # make state in submission csv our prediction
 submission["state"] = y_pred
@@ -164,3 +118,21 @@ submission["state"] = y_pred
 # write to csv for kaggle submission
 os.makedirs('submissions/boosting', exist_ok=True)
 submission.to_csv('submissions/boosting/out.csv', index=False)
+
+# No PCA
+# Accuracy:  0.798559781869213
+# Average precision score:  0.7820865392398746
+# Roc score:  0.833622885177769
+
+# Accuracy:  0.760897088962134
+# Average precision score:  0.7492426610591539
+# Roc score:  0.8207008229210955
+
+# With PCA
+# Accuracy:  0.6461024626542899
+# Average precision score:  0.6057154692572313
+# Roc score:  0.6549551915893461
+
+# Accuracy:  0.5037356128154803
+# Average precision score:  0.5220779326228184
+# Roc score:  0.5400416219024612
