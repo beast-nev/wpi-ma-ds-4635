@@ -13,8 +13,9 @@ from time import time
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.utils import resample
-from ppca import PPCA
+from sklearn.metrics import classification_report
 from sklearn.impute import SimpleImputer
+
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -71,15 +72,24 @@ for i in sensor_names:
 
 print("Finished creating features")
 
-x_train, y_train = resample(x_train, y_train, random_state=42)
+print(x_train.head(5))
+print(x_train.shape)
+# x_train, y_train = resample(x_train, y_train, random_state=42)
+x_train = x_train.sample(frac=1.0, random_state=42)
+y_train = y_train.sample(frac=1.0, random_state=42)
+x_test = x_test.sample(frac=1.0, random_state=42)
+print(x_train.head(5))
+print(x_train.shape)
+
+
 # print("Finished resampling")
 
 feature_names = x_train.columns
 
 # scaling
-scaler = StandardScaler()
-x_train = scaler.fit_transform(x_train)
-x_test = scaler.fit_transform(x_test)
+# scaler = StandardScaler()
+# x_train = scaler.fit_transform(x_train)
+# x_test = scaler.fit_transform(x_test)
 
 # feature selection & model creation
 model = HistGradientBoostingClassifier(learning_rate=0.05, max_leaf_nodes=25,
@@ -119,7 +129,7 @@ dic = {'PC{}'.format(i): most_important_names[i] for i in range(n_pcs)}
 
 # build the dataframe
 df = pd.DataFrame(dic.items())
-print(df)
+# print(df[1])
 
 # fit the model
 
@@ -134,8 +144,8 @@ print("Finished feature selection")
 #     model, x_train, y_train.values.ravel(), cv=group_cv, groups=x_train_load["subject"].groupby(
 #         np.arange(len(x_train_load["subject"])) // 60).mean(), n_jobs=6)))
 
-print("Accuracy: ", np.mean(cross_val_score(
-    model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
+# print("Accuracy: ", np.mean(cross_val_score(
+#     model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
 
 # fitting for prediction
 model.fit(x_train, y_train.values.ravel())
@@ -144,6 +154,8 @@ y_pred_train = model.predict(x_train)
 
 print("Average precision score: ", average_precision_score(y_train, y_pred_train))
 print("Roc score: ", roc_auc_score(y_train, y_pred_train))
+print("Classification report: ", classification_report(
+    y_true=y_train, y_pred=y_pred_train))
 
 # predict y_test
 y_pred = model.predict(x_test)
