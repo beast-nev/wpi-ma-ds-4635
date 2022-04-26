@@ -11,11 +11,25 @@ from time import time
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.utils import resample
-
+import warnings
+warnings.simplefilter(action='ignore', category=Warning)
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
 x_test_load = pd.read_csv('data/test.csv')
+
+# creating submission csv
+submission = pd.DataFrame(
+    columns=["sequence"], data=x_test_load[["sequence"]].groupby(np.arange(len(x_test_load[["sequence"]])) // 60).mean())
+
+# scaling
+scaler = StandardScaler()
+x_train_load = pd.DataFrame(data=scaler.fit_transform(
+    x_train_load), columns=x_train_load.columns)
+x_test_load = pd.DataFrame(data=scaler.fit_transform(
+    x_test_load), columns=x_test_load.columns)
+
+print(x_train_load.columns)
 
 # load training labels from csv
 y_train_load = pd.read_csv('data/train_labels.csv')
@@ -26,10 +40,6 @@ y_train = y_train_load.loc[:, y_train_load.columns != 'sequence']
 # sensor names for easy indexing
 sensor_names = ["sensor_00", "sensor_01", "sensor_02", "sensor_03", "sensor_04", "sensor_05", "sensor_06",
                 "sensor_07", "sensor_08", "sensor_09", "sensor_10", "sensor_11", "sensor_12"]
-
-# creating submission csv
-submission = pd.DataFrame(
-    columns=["sequence"], data=x_test_load[["sequence"]].groupby(np.arange(len(x_test_load[["sequence"]])) // 60).mean())
 
 # create new features for the mean,std,max,min,and sum of each sensor values
 x_train = pd.DataFrame()
@@ -72,67 +82,49 @@ for i in sensor_names:
 
 print("Finished creating features")
 
-# # sample
+# sample
 # x_train = x_train.sample(frac=1.0, random_state=42)
 
+# With scaling
+# Accuracy:  0.7838106835117118
+# Average precision score:  0.8904739937106321
+# Roc score:  0.9237435396647342
+
 # feature selection & model creation
-mlp = MLPClassifier(max_iter=100, solver="adam")
-mlp_space = {
-    'hidden_layer_sizes': [(10, 30, 10), (30, 75, 20), (50, 100, 35), (20,), (50,), ],
-    'activation': ['relu', 'logistic'],
-    'alpha': [0.0001, 0.05, 0.1, 0.25],
-    'learning_rate': ['constant', 'adaptive'],
-}
-grid_search = GridSearchCV(mlp, mlp_space, n_jobs=-1, cv=5)
-# X is train samples and y is the corresponding labels
-grid_search.fit(x_train, y_train)
-
-# # pca
-# pca = PCA(0.95, random_state=42)
-# pca.fit(x_train, y_train.values.ravel())
-# # print("Explained Variance ratio:", pca.explained_variance_ratio_)
-
-# # transform x_train for training
-# x_train = pca.transform(x_train)
-# x_test = pca.transform(x_test)
+mlp = MLPClassifier(activation='logistic', alpha=0.05, batch_size=500,
+                    hidden_layer_sizes=(121,), max_iter=1000, random_state=42, learning_rate="constant")
+# mlp_space = {
+#     'hidden_layer_sizes': [(121,)],
+#     'learning_rate': ['constant', 'adaptive'],
+#     'batch_size': [200, 500],
+#     'learning_rate_init': [0.001, 0.05, 0.0001],
+# }
+# grid_search = GridSearchCV(mlp, mlp_space, n_jobs=-1, cv=5)
+# # X is train samples and y is the corresponding labels
+# grid_search.fit(x_train, y_train.values.ravel())
+# print("Best estimator: ", grid_search.best_estimator_)
+# print("Best params: ", grid_search.best_params_)
+# print("Best score: ", grid_search.best_score_)
 
 # print("Finished feature selection")
 
-# print("Accuracy: ", np.mean(cross_val_score(
-#     model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
+print("Accuracy: ", np.mean(cross_val_score(
+    mlp, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
 
-# # fitting for prediction
-# model.fit(x_train, y_train.values.ravel())
+# fitting for prediction
+mlp.fit(x_train, y_train.values.ravel())
 
-y_pred_train = grid_search.predict(x_train)
+y_pred_train = mlp.predict(x_train)
 
 print("Average precision score: ", average_precision_score(y_train, y_pred_train))
 print("Roc score: ", roc_auc_score(y_train, y_pred_train))
 
 # predict y_test
-y_pred = grid_search.predict(x_test)
+y_pred = mlp.predict(x_test)
 
 # make state in submission csv our prediction
 submission["state"] = y_pred
 
 # write to csv for kaggle submission
-os.makedirs('submissions/boosting', exist_ok=True)
-submission.to_csv('submissions/boosting/out.csv', index=False)
-
-# No PCA
-# Accuracy:  0.798559781869213
-# Average precision score:  0.7820865392398746
-# Roc score:  0.833622885177769
-
-# Accuracy:  0.760897088962134
-# Average precision score:  0.7492426610591539
-# Roc score:  0.8207008229210955
-
-# With PCA
-# Accuracy:  0.6461024626542899
-# Average precision score:  0.6057154692572313
-# Roc score:  0.6549551915893461
-
-# Accuracy:  0.5037356128154803
-# Average precision score:  0.5220779326228184
-# Roc score:  0.5400416219024612
+os.makedirs('submissions/mlp', exist_ok=True)
+submission.to_csv('submissions/mlp/out.csv', index=False)

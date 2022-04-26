@@ -13,7 +13,8 @@ from time import time
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.utils import resample
-
+from ppca import PPCA
+from sklearn.impute import SimpleImputer
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -40,6 +41,8 @@ x_test = pd.DataFrame()
 for i in sensor_names:
     x_train[i+"_mean"] = x_train_load[i].groupby(
         np.arange(len(x_train_load[i])) // 60).mean()
+    x_train[i+"_lag"] = x_train_load[i].groupby(
+        np.arange(len(x_train_load[i])) // 60).shift(1)
     x_train[i+"_std"] = x_train_load[i].groupby(
         np.arange(len(x_train_load[i])) // 60).std()
     x_train[i+"_max"] = x_train_load[i].groupby(
@@ -53,6 +56,8 @@ for i in sensor_names:
 
     x_test[i+"_mean"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).mean()
+    x_test[i+"_lag"] = x_test_load[i].groupby(
+        np.arange(len(x_test_load[i])) // 60).shift(1)
     x_test[i+"_std"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).std()
     x_test[i+"_max"] = x_test_load[i].groupby(
@@ -65,71 +70,56 @@ for i in sensor_names:
         np.arange(len(x_test_load[i])) // 60).quantile(0.75) - x_test_load[i].groupby(np.arange(len(x_test_load[i])) // 60).quantile(0.25)
 
 print("Finished creating features")
-# print(x_train.head(3))
-# print(x_train.shape)
-# print(x_test.head(3))
-# print(x_test.shape)
-
-# feature_names = x_train.columns
 
 x_train, y_train = resample(x_train, y_train, random_state=42)
 # print("Finished resampling")
 
+feature_names = x_train.columns
+
+# scaling
+scaler = StandardScaler()
+x_train = scaler.fit_transform(x_train)
+x_test = scaler.fit_transform(x_test)
+
 # feature selection & model creation
 model = HistGradientBoostingClassifier(learning_rate=0.05, max_leaf_nodes=25,
-                                       max_iter=1000, min_samples_leaf=500,
+                                       max_iter=1500, min_samples_leaf=250,
                                        l2_regularization=1,
-                                       random_state=4, verbose=0, scoring="loss")
+                                       random_state=42, verbose=0, scoring="roc_auc")
 print("Finished model creation")
 
-# # forward subset selection
-# start_time = time()
-# selector = SequentialFeatureSelector(
-#     model, direction="backward", n_features_to_select=80, n_jobs=-1).fit(x_train, y_train.values.ravel())
-# end_time = time()
-
-# # runtime of subset selection
-# print("Total selection time: ", end_time-start_time)
-
-# get which features we want for test
-# 'sensor_00_mean', 'sensor_00_std', 'sensor_01_q1', 'sensor_02_std', 'sensor_02_q3', 'sensor_04_mean', 'sensor_04_max',
-# 'sensor_04_q3', 'sensor_05_mean', 'sensor_08_std', 'sensor_10_mean', 'sensor_10_max', 'sensor_10_q1', 'sensor_12_min',
-# 'sensor_12_q1'
-# mask = selector.get_support()
-# features_chosen_mask = x_train.columns[mask]
-# features_chosen = [feature
-#                    for feature in features_chosen_mask]
-# print("Features chosen: ", features_chosen)
-
-# # transform x_train for training
-# x_train = selector.transform(x_train)
+# impute
+imp = SimpleImputer(missing_values=np.nan, strategy="mean")
+x_train = imp.fit_transform(x_train)
+x_test = imp.fit_transform(x_test)
 
 # pca
-pca = PCA(0.95, random_state=42)
+pca = PCA()
 pca.fit(x_train, y_train.values.ravel())
 # print("Explained Variance ratio:", pca.explained_variance_ratio_)
 
-# # number of components
-# n_pcs = pca.components_.shape[0]
+# number of components
+n_pcs = pca.components_.shape[0]
 
 # transform x_train for training
 x_train = pca.transform(x_train)
 x_test = pca.transform(x_test)
 
-# # get the index of the most important feature on EACH component
-# # LIST COMPREHENSION HERE
-# most_important = [np.abs(pca.components_[i]).argmax() for i in range(n_pcs)]
+# get the index of the most important feature on EACH component
+# LIST COMPREHENSION HERE
+most_important = [np.abs(pca.components_[i]).argmax() for i in range(n_pcs)]
 
-# initial_feature_names = feature_names
-# # get the names
-# most_important_names = [
-#     initial_feature_names[most_important[i]] for i in range(n_pcs)]
+initial_feature_names = feature_names
+# get the names
+most_important_names = [
+    initial_feature_names[most_important[i]] for i in range(n_pcs)]
 
-# # LIST COMPREHENSION HERE AGAIN
-# dic = {'PC{}'.format(i): most_important_names[i] for i in range(n_pcs)}
+# LIST COMPREHENSION HERE AGAIN
+dic = {'PC{}'.format(i): most_important_names[i] for i in range(n_pcs)}
 
-# # build the dataframe
-# df = pd.DataFrame(dic.items())
+# build the dataframe
+df = pd.DataFrame(dic.items())
+print(df)
 
 # fit the model
 
