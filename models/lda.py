@@ -2,6 +2,7 @@ import os
 from statistics import mode
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
@@ -111,3 +112,17 @@ submission["state"] = y_pred
 # write to csv for kaggle submission
 os.makedirs('submissions/lda', exist_ok=True)
 submission.to_csv('submissions/lda/out.csv', index=False)
+
+# create LDA plot
+plt.figure()
+colors = ['red', 'green', 'blue']
+lw = 2
+for color, i, target_name in zip(colors, [0, 1, 2], y_train):
+    plt.scatter(data_plot[y == i, 0], y_pred_train[y_train == i, 1], alpha=.8, color=color,
+                label=target_name)
+
+# add legend to plot
+plt.legend(loc='best', shadow=False, scatterpoints=1)
+
+# display LDA plot
+plt.show()
