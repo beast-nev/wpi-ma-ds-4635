@@ -68,7 +68,7 @@ for i in sensor_names:
 # take samples of our data
 x_train = x_train.sample(frac=1.0, random_state=42)
 y_train = y_train.sample(frac=1.0, random_state=42)
-x_test = x_test.sample(frac=1.0, random_state=42)
+# x_test = x_test.sample(frac=1.0, random_state=42)
 
 # features names for pca
 feature_names = x_train.columns
@@ -80,7 +80,7 @@ x_test = scaler.fit_transform(x_test)
 
 # feature selection & model creation
 model = HistGradientBoostingClassifier(learning_rate=0.1, max_leaf_nodes=31,
-                                       max_iter=1500, min_samples_leaf=250,
+                                       max_iter=1000, min_samples_leaf=750,
                                        l2_regularization=1,
                                        random_state=42, verbose=0, scoring="roc_auc")
 
@@ -94,28 +94,9 @@ pca = PCA()
 pca.fit(x_train, y_train.values.ravel())
 # print("Explained Variance ratio:", pca.explained_variance_ratio_)
 
-# number of components
-n_pcs = pca.components_.shape[0]
-
 # transform x_train for training
 x_train = pca.transform(x_train)
 x_test = pca.transform(x_test)
-
-# get the index of the most important feature on EACH component
-most_important = [np.abs(pca.components_[i]).argmax() for i in range(n_pcs)]
-
-# get the names
-most_important_names = [
-    feature_names[most_important[i]] for i in range(n_pcs)]
-
-# LIST COMPREHENSION HERE AGAIN
-dic = {'PC{}'.format(i): most_important_names[i] for i in range(n_pcs)}
-
-# build the dataframe
-df = pd.DataFrame(dic.items())
-
-# print("Accuracy: ", np.mean(cross_val_score(
-#     model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
 
 # fitting for prediction
 model.fit(x_train, y_train.values.ravel())
@@ -131,13 +112,10 @@ print("Classification report: ", classification_report(
 # test predcition
 y_p = model.predict(x_test)
 
-# predict y_test probability
-y_pred = pd.DataFrame(data=model.predict_proba(x_test),
-                      columns=["state0", "state1"])
-y_pred["pred"] = np.max(y_pred.values, axis=1)
+y_pred = model.predict_proba(x_test)
 
 # make state in submission csv our prediction
-submission["state"] = y_pred["pred"]
+submission["state"] = y_pred[:, 1]
 
 # write to csv for kaggle submission
 os.makedirs('submissions/boosting', exist_ok=True)
