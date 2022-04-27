@@ -114,16 +114,11 @@ print("Roc score: ", roc_auc_score(y_train, y_pred_train))
 print("Classification report: ", classification_report(
     y_true=y_train, y_pred=y_pred_train))
 
-# test predcition
-y_p = mlp.predict(x_test)
-
-# predict y_test probability
-y_pred = pd.DataFrame(data=mlp.predict_proba(x_test),
-                      columns=["state0", "state1"])
-y_pred["pred"] = np.max(y_pred.values, axis=1)
+# test prediction
+y_pred = mlp.predict_proba(x_test)
 
 # make state in submission csv our prediction
-submission["state"] = y_pred["pred"]
+submission["state"] = y_pred[:, 1]
 
 # write to csv for kaggle submission
 os.makedirs('submissions/mlp', exist_ok=True)

@@ -41,10 +41,10 @@ for i in sensor_names:
         np.arange(len(x_train_load[i])) // 60).shift(1)
     x_train[i+"_std"] = x_train_load[i].groupby(
         np.arange(len(x_train_load[i])) // 60).std()
-    x_train[i+"_max"] = x_train_load[i].groupby(
-        np.arange(len(x_train_load[i])) // 60).max()
-    x_train[i+"_min"] = x_train_load[i].groupby(
-        np.arange(len(x_train_load[i])) // 60).min()
+    # x_train[i+"_max"] = x_train_load[i].groupby(
+    #     np.arange(len(x_train_load[i])) // 60).max()
+    # x_train[i+"_min"] = x_train_load[i].groupby(
+    #     np.arange(len(x_train_load[i])) // 60).min()
     x_train[i+"_median"] = x_train_load[i].groupby(
         np.arange(len(x_train_load[i])) // 60).median()
     x_train[i+"_iqr"] = x_train_load[i].groupby(
@@ -56,10 +56,10 @@ for i in sensor_names:
         np.arange(len(x_test_load[i])) // 60).shift(1)
     x_test[i+"_std"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).std()
-    x_test[i+"_max"] = x_test_load[i].groupby(
-        np.arange(len(x_test_load[i])) // 60).max()
-    x_test[i+"_min"] = x_test_load[i].groupby(
-        np.arange(len(x_test_load[i])) // 60).min()
+    # x_test[i+"_max"] = x_test_load[i].groupby(
+    #     np.arange(len(x_test_load[i])) // 60).max()
+    # x_test[i+"_min"] = x_test_load[i].groupby(
+    #     np.arange(len(x_test_load[i])) // 60).min()
     x_test[i+"_median"] = x_test_load[i].groupby(
         np.arange(len(x_test_load[i])) // 60).median()
     x_test[i+"_irq"] = x_test_load[i].groupby(
@@ -80,7 +80,7 @@ x_test = scaler.fit_transform(x_test)
 
 # feature selection & model creation
 model = HistGradientBoostingClassifier(learning_rate=0.1, max_leaf_nodes=31,
-                                       max_iter=1000, min_samples_leaf=750,
+                                       max_iter=1000, min_samples_leaf=250,
                                        l2_regularization=1,
                                        random_state=42, verbose=0, scoring="roc_auc")
 
@@ -109,9 +109,7 @@ print("Roc score: ", roc_auc_score(y_train, y_pred_train))
 print("Classification report: ", classification_report(
     y_true=y_train, y_pred=y_pred_train))
 
-# test predcition
-y_p = model.predict(x_test)
-
+# test prediction
 y_pred = model.predict_proba(x_test)
 
 # make state in submission csv our prediction
