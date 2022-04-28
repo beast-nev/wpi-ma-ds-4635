@@ -4,11 +4,15 @@ import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.preprocessing import StandardScaler
 from time import time
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import classification_report, roc_auc_score
+from sklearn.model_selection import GroupKFold
+
+from models.boosting import X_train
+
 
 # load training & test from csv
 x_train_load = pd.read_csv('data/train.csv')
@@ -19,6 +23,8 @@ y_train_load = pd.read_csv('data/train_labels.csv')
 
 # remove all but state data
 y_train = y_train_load.loc[:, y_train_load.columns != 'sequence']
+y_train_index = y_train
+y_train = y_train.values.ravel()
 
 # sensor names for easy indexing
 sensor_names = ["sensor_00", "sensor_01", "sensor_02", "sensor_03", "sensor_04", "sensor_05", "sensor_06",
@@ -66,7 +72,7 @@ for i in sensor_names:
 
 # take samples of our data
 x_train = x_train.sample(frac=1.0, random_state=42)
-y_train = y_train.sample(frac=1.0, random_state=42)
+# y_train = y_train.sample(frac=1.0, random_state=42)
 x_test = x_test.sample(frac=1.0, random_state=42)
 
 # features names for pca
@@ -79,7 +85,7 @@ x_test = scaler.fit_transform(x_test)
 
 # feature selection & model creation
 model = RandomForestClassifier(
-    n_estimators=500, verbose=0, n_jobs=-1, max_depth=25)
+    n_estimators=500, verbose=0, n_jobs=-1, max_depth=15)
 
 # impute nans
 imp = SimpleImputer(missing_values=np.nan, strategy="mean")
@@ -88,53 +94,52 @@ x_test = imp.fit_transform(x_test)
 
 # pca
 pca = PCA()
-pca.fit(x_train, y_train.values.ravel())
+pca.fit(x_train, y_train)
 # print("Explained Variance ratio:", pca.explained_variance_ratio_)
 
 # transform x_train for training
 x_train = pca.transform(x_train)
 x_test = pca.transform(x_test)
 
-# # number of components
-# n_pcs = pca.components_.shape[0]
+# group_kfold = GroupKFold()
 
-# # get the index of the most important feature on EACH component
-# most_important = [np.abs(pca.components_[i]).argmax() for i in range(n_pcs)]
+# bestScore = 0
+# bestPred = []
 
-# # get the names
-# most_important_names = [
-#     feature_names[most_important[i]] for i in range(n_pcs)]
+# for train_index, test_index in group_kfold.split(x_train, y_train, y_train_index.index):
+#     X_train, X_test = x_train[train_index], x_train[test_index]
+#     Y_train, Y_test = y_train[train_index], y_train[test_index]
 
-# # LIST COMPREHENSION HERE AGAIN
-# dic = {'PC{}'.format(i): most_important_names[i] for i in range(n_pcs)}
+#     # fit model
+#     model.fit(X_train, Y_train)
 
-# # build the dataframe
-# df = pd.DataFrame(dic.items())
+#     # predict val auc_roc score
+#     y_pred_val = model.predict_proba(X_test)
 
-# print("Accuracy: ", np.mean(cross_val_score(
-#     model, x_train, y_train.values.ravel(), cv=5, n_jobs=-1)))
+#     # compute roc_auc and classification report
+#     score = roc_auc_score(Y_test, y_pred_val[:, 1])
+#     print("Roc score: ", roc_auc_score(Y_test, y_pred_val[:, 1]))
+#     if score > bestScore:
+#         bestScore = score
+#         print("New best score: ", bestScore)
 
-# fitting for prediction
-model.fit(x_train, y_train.values.ravel())
+#         # test prediction
+#         bestPred = model.predict_proba(x_test)[:, 1]
 
-# predict training values for training scoring
-y_pred_train = model.predict(x_train)
 
-# compute roc_auc and classification report
-print("Roc score: ", roc_auc_score(y_train, y_pred_train))
-print("Classification report: ", classification_report(
-    y_true=y_train, y_pred=y_pred_train))
+# print("Classification report: ", classification_report(
+#     y_true=Y_test, y_pred=y_pred_val))
 
-# test predcition
-y_p = model.predict(x_test)
+X_train, X_test, Y_train, Y_test = train_test_split(
+    x_train, y_train, test_size=0.33, random_state=42)
+
+model.fit(X_train, Y_train)
 
 # predict y_test probability
-y_pred = pd.DataFrame(data=model.predict_proba(x_test),
-                      columns=["state0", "state1"])
-y_pred["pred"] = np.max(y_pred.values, axis=1)
+y_pred = model.predict_proba(x_test)
 
 # make state in submission csv our prediction
-submission["state"] = y_pred["pred"]
+submission["state"] = y_pred[:, 1]
 
 # write to csv for kaggle submission
 os.makedirs('submissions/random_forests', exist_ok=True)
